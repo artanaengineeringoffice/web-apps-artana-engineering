@@ -1,92 +1,106 @@
 <template>
-  <v-app class="app-bg">
-    <v-main>
-      <v-container fluid class="pa-0">
-        <v-container class="py-8 px-4 px-md-8 px-lg-12" style="max-width: 1300px; position: relative; z-index: 1;">
+  <v-container>
+    <!--HEADER-->
+    <v-row>
+      <v-col cols="12">
+        <v-card class="pa-4 d-flex justify-space-between align-center" color="deep-purple" elevation="10" rounded="xl">
+          <div class="d-flex">
+            <v-avatar size="60" class="pa-1">
+              <v-img v-if="profile?.avatar_url" :src="profile.avatar_url" cover rounded="xl" />
+              <v-icon v-else icon="mdi-account-circle" size="60" color="deep-purple-lighten-3" />
+            </v-avatar>
+            <div class="ml-4">
+              <p>{{ greeting }},</p>
+              <p class="text-h5 text-capitalize font-weight-bold">{{ profile?.full_name || "Karyawan" }}</p>
+            </div>
+          </div>
+          <v-btn icon="mdi-logout" size="small" variant="tonal" />
+          <v-btn icon="mdi-sync" size="small" :loading="syncing" @click="refreshAll" variant="tonal" />
+        </v-card>
+      </v-col>
+      <v-col>
+        <v-card class="pa-4 d-flex justify-space-between align-center" elevation="10" rounded="xl">
+          <div class="d-flex">
+            <v-icon class="my-auto" start icon="mdi-calendar-blank" size="small" />
+            <p>{{ todayLabel }},</p>
+            <p>{{ todayDate }}</p>
+          </div>
+          <p class="text-h5">{{ liveClock }}</p>
+        </v-card>
+      </v-col>
+    </v-row>
 
-          <!-- HEADER BANNER (sama seperti kode awal) -->
-          <v-row>
-            <v-col cols="12">
-              <v-card class="banner-card rounded-xl pa-5 pa-sm-6" elevation="6">
-                <v-row align="center" no-gutters>
-                  <v-col cols="12" sm="8">
-                    <div class="d-flex align-center ga-4">
-                      <v-avatar size="72" class="avatar-glow">
-                        <v-img v-if="profile?.avatar_url" :src="profile.avatar_url" cover />
-                        <v-icon v-else icon="mdi-account-circle" size="48" color="white" />
-                      </v-avatar>
-                      <div>
-                        <h1 class="text-h4 text-sm-h3 font-weight-bold text-white mb-1">
-                          {{ greeting }}, {{ profile?.full_name || "Karyawan" }}
-                        </h1>
-                        <p class="text-body-1 text-white opacity-80 mb-0">{{ profile?.email }}</p>
-                      </div>
-                    </div>
+    <!--STATUS HARI INI-->
+    <v-row>
+      <v-col>
+        <v-card class="pa-4" elevation="10" rounded="xl">
+          <div  @click="show = !show" class="d-flex justify-space-between">
+            <div class="d-flex">
+              <v-icon start class="my-auto" :icon="show ? 'mdi-chevron-up' : 'mdi-chevron-down'"/>
+              <p class="my-auto">Status Hari Ini</p>
+            </div>
+            <v-chip color="orange" variant="flat" class="text-white" :text="statusChip.text" /> 
+          </div>  
+
+          <v-expand-transition>
+            <div v-show="show">
+              <v-divider class="mt-4" />              
+
+              <v-card-text class="text-center">
+                <v-row no-gutters>
+                  <v-col cols="6" class="d-flex align-center">
+                    <p class="text-left">Rekaman kehadiran Anda untuk {{ todayLabel }}</p>
                   </v-col>
-                  <v-col cols="12" sm="4" class="text-sm-right mt-3 mt-sm-0">
-                    <div class="d-flex flex-column align-sm-end">
-                      <span class="text-h5 font-weight-bold text-white">{{ todayDate }}</span>
-                      <span class="text-h6 text-white opacity-70">{{ liveClock }}</span>
-                      <v-chip class="mt-2" variant="text" text-color="primary" size="small" label>
-                        <v-icon start icon="mdi-calendar-blank" size="x-small" />
-                        {{ todayLabel }}
-                      </v-chip>
-                    </div>
-                    <v-btn @click="logout" size="small" text="logout" />
+                  <v-col cols="6" class="d-flex justify-end">
+                    <v-progress-circular :model-value="attendanceProgress" :size="100" :width="10"
+                      :color="attendanceToday?.checkout_time ? 'success' : attendanceToday?.checkin_time ? 'primary' : 'grey-lighten-1'" rounded>
+                      <span class="text-h6 font-weight-bold">{{ attendanceProgress }}%</span>
+                    </v-progress-circular>
                   </v-col>
                 </v-row>
-              </v-card>
-            </v-col>
-          </v-row>
 
-          <!-- STATUS & AKSI -->
-          <v-row class="mt-6">
-            <!-- Kartu Status Hari Ini (tidak berubah) -->
-            <v-col cols="12" md="7" lg="8">
-              <v-card class="glass-card rounded-xl pa-5 pa-sm-6" elevation="8">
-                <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-4">
-                  <div>
-                    <h2 class="text-h5 font-weight-bold d-flex align-center">
-                      <v-icon icon="mdi-calendar-check" color="primary" class="mr-2" />
-                      Status Hari Ini
-                    </h2>
-                    <p class="text-body-2 text-medium-emphasis mb-0">Rekaman kehadiran Anda untuk {{ todayLabel }}</p>
-                  </div>
-                  <v-chip size="default" variant="flat" :color="statusChip.color" class="text-white font-weight-bold text-uppercase px-3">
-                    {{ statusChip.text }}
-                  </v-chip>
-                </div>
-                <div class="d-flex justify-center my-4">
-                  <v-progress-circular :model-value="attendanceProgress" :size="120" :width="10"
-                    :color="attendanceToday?.checkout_time ? 'success' : attendanceToday?.checkin_time ? 'primary' : 'grey-lighten-1'" rounded>
-                    <span class="text-h6 font-weight-bold">{{ attendanceProgress }}%</span>
-                  </v-progress-circular>
-                </div>
-                <v-divider class="mb-4" />
-                <div class="d-flex flex-column ga-3">
-                  <div class="d-flex align-center justify-space-between">
-                    <div class="d-flex align-center ga-3">
-                      <v-icon :color="attendanceToday?.checkin_time ? 'success' : 'grey'" icon="mdi-login" />
-                      <div>
-                        <div class="font-weight-medium">Check-in</div>
-                        <div class="text-caption text-medium-emphasis">{{ attendanceToday?.checkin_time ? "Tercatat" : "Belum check-in" }}</div>
+                <v-divider class="my-4" />
+
+                <div class="d-flex flex-column">
+                  <div class="d-flex justify-space-between">
+                    <div class="d-flex">
+                      <v-icon start icon="mdi-login" :color="attendanceToday?.checkin_time ? 'success' : 'grey'" />
+                      <div class="text-start">
+                        <p>Check-in</p>
+                        <p class="text-caption text-medium-emphasis">{{ attendanceToday?.checkin_time ? "Tercatat" : "Belum check-in" }}</p>
                       </div>
                     </div>
                     <span class="font-weight-bold">{{ attendanceToday?.checkin_time || "—" }}</span>
                   </div>
-                  <div class="d-flex align-center justify-space-between">
-                    <div class="d-flex align-center ga-3">
-                      <v-icon :color="attendanceToday?.checkout_time ? 'primary' : 'grey'" icon="mdi-logout" />
-                      <div>
-                        <div class="font-weight-medium">Check-out</div>
-                        <div class="text-caption text-medium-emphasis">{{ attendanceToday?.checkout_time ? "Tercatat" : "Belum check-out" }}</div>
+                  
+                  <v-divider class="my-4" />
+
+                  <div class="d-flex justify-space-between">
+                    <div class="d-flex">
+                      <v-icon start icon="mdi-logout" :color="attendanceToday?.checkout_time ? 'primary' : 'grey'" />
+                      <div class="text-start">
+                        <p>Check-out</p>
+                        <p class="text-caption text-medium-emphasis">{{ attendanceToday?.checkout_time ? "Tercatat" : "Belum check-out" }}</p>
                       </div>
                     </div>
                     <span class="font-weight-bold">{{ attendanceToday?.checkout_time || "—" }}</span>
                   </div>
                 </div>
-              </v-card>
-            </v-col>
+              </v-card-text>
+            </div>
+          </v-expand-transition>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
+
+
+  <v-app class="app-bg">
+    <v-main>
+      <v-container fluid class="pa-0">
+        <v-container class="py-8 px-4 px-md-8 px-lg-12" style="max-width: 1300px; position: relative; z-index: 1;">
+          <!-- STATUS & AKSI -->
+          <v-row class="mt-6">
 
             <!-- Kartu Aksi Cepat (DITAMBAH FITUR LOKASI) -->
             <v-col cols="12" md="5" lg="4">
@@ -128,12 +142,6 @@
                     @click="doCheckout" class="action-btn" elevation="4"
                   >
                     <v-icon start icon="mdi-logout-variant" size="28" /> Check-out
-                  </v-btn>
-                  <v-btn
-                    size="large" block rounded="lg" variant="outlined" color="grey-darken-2"
-                    :loading="syncing" @click="refreshAll"
-                  >
-                    <v-icon start icon="mdi-sync" /> Perbarui Status
                   </v-btn>
                   <!-- Tombol periksa lokasi manual -->
                   <v-btn
@@ -245,10 +253,13 @@ import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { supabase } from "../lib/supabase";
 
+const show = ref(false)
+
 // === KONFIGURASI LOKASI KANTOR ===
 const OFFICE_LAT = -6.589203;   // Ganti dengan latitude kantor anda , , 
 const OFFICE_LNG = 107.474524;  // Ganti dengan longitude kantor anda
 const RADIUS_METERS = 200;      // radius dalam meter
+
 
 // Helper: Haversine formula (menghitung jarak dalam meter)
 const getDistance = (lat1, lon1, lat2, lon2) => {
@@ -418,7 +429,7 @@ const loadProfile = async () => {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData?.user) {
     loadingProfile.value = false;
-    router.replace("/login");
+    router.replace("/login");    
     return;
   }
   const { data, error } = await supabase.from("profiles").select("id, full_name, email, role, avatar_url").eq("id", userData.user.id).single();
@@ -522,11 +533,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Style sama persis dengan kode awal */
-.app-bg {
-  background: linear-gradient(135deg, #e0e7ff 0%, #f5f3ff 100%);
-  min-height: 100vh;
-}
 .banner-card {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   border: none;

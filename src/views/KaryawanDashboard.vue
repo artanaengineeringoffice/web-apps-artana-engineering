@@ -1,5 +1,10 @@
-<template>
+<template>   
   <v-container>
+    <v-snackbar v-model="snackbar.show" timeout="2500" location="top right" color="black" variant="flat">
+          <span class="text-body-2">{{ snackbar.text }}</span>
+    </v-snackbar>
+    
+
     <!--HEADER-->
     <v-row>
       <v-col cols="12">
@@ -93,182 +98,147 @@
       </v-col>
     </v-row>
 
-    <v-row>
-      <v-col>
-        <v-card class="pa-4" rounded="xl" elevation="10">
-          <div class="d-flex">
-            <v-icon start color="amber" size="35">mdi-flash</v-icon>
-            <p class="my-auto text-h5 font-weight-bold">Aksi Cepat</p>
-          </div>
-          <p class="text-body-2 mt-4 text-grey">Tombol otomatis aktif berdasarkan lokasi Anda.</p>
-          
-          <v-chip rounded="xl" variant="tonal" color="error" class="my-4">
+    <!-- STATUS & AKSI -->
+    <v-row class="mt-6">
+
+      <!-- Kartu Aksi Cepat (DITAMBAH FITUR LOKASI) -->
+      <v-col cols="12" md="5" lg="4">
+        <v-card class="glass-card rounded-xl pa-5 pa-sm-6 h-100 d-flex flex-column" elevation="8">
+          <h2 class="text-h5 font-weight-bold d-flex align-center mb-3">
+            <v-icon icon="mdi-flash" color="amber" class="mr-2" />
+            Aksi Cepat
+          </h2>
+          <p class="text-body-2 text-medium-emphasis mb-4">Tombol otomatis aktif berdasarkan status Anda.</p>
+
+          <!-- STATUS LOKASI (baru) -->
+          <v-alert v-if="locationError" type="error" variant="tonal" density="compact" class="mb-3">
+            {{ locationError }}
+          </v-alert>
+          <v-chip v-else-if="locationLoading" variant="light" color="info" class="mb-3">
+            <v-icon start icon="mdi-map-marker-radius" /> Mengambil lokasi...
+          </v-chip>
+          <v-chip v-else-if="isWithinRadius === true" variant="flat" color="success" class="mb-3">
+            <v-icon start icon="mdi-check-decagram" /> Dalam Radius Kantor
+          </v-chip>
+          <v-chip v-else-if="isWithinRadius === false" variant="flat" color="error" class="mb-3">
             <v-icon start icon="mdi-close-circle" /> Luar Radius Kantor
           </v-chip>
-          <v-chip class="my-4" variant="text" color="grey" start prepend-icon="mdi-map-marker-question" text="Lokasi belum diperiksa" />
-          
-          <v-btn rounded="xl" elevation="5" variant="flat" color="info"
-            :loading="locationLoading" @click="checkLocationManual"   
-          >
-            <v-icon start icon="mdi-crosshairs-gps" /> Periksa Lokasi Saya
-          </v-btn>
+          <v-chip v-else variant="tonal" color="grey" class="mb-3">
+            <v-icon start icon="mdi-map-marker-question" /> Lokasi belum diperiksa
+          </v-chip>
+
+          <div class="d-flex flex-column ga-3 mt-auto">
+            <v-btn
+              size="x-large" block rounded="lg" color="success" variant="flat"
+              :loading="actionLoading" :disabled="!canCheckin || !isWithinRadius || locationLoading"
+              @click="doCheckin" class="action-btn" elevation="4"
+            >
+              <v-icon start icon="mdi-login-variant" size="28" /> Check-in
+            </v-btn>
+            <v-btn
+              size="x-large" block rounded="lg" color="primary" variant="flat"
+              :loading="actionLoading" :disabled="!canCheckout || !isWithinRadius || locationLoading"
+              @click="doCheckout" class="action-btn" elevation="4"
+            >
+              <v-icon start icon="mdi-logout-variant" size="28" /> Check-out
+            </v-btn>
+            <!-- Tombol periksa lokasi manual -->
+            <v-btn
+              size="large" block rounded="lg" variant="text" color="info"
+              :loading="locationLoading" @click="checkLocationManual"
+            >
+              <v-icon start icon="mdi-crosshairs-gps" /> Periksa Lokasi Saya
+            </v-btn>
+          </div>
+
+          <v-divider class="my-4" />
+          <div class="d-flex align-start ga-2 text-caption text-medium-emphasis">
+            <v-icon icon="mdi-information-outline" size="16" color="grey-darken-1" />
+            <span>Absensi hanya bisa dilakukan dalam radius {{ RADIUS_METERS }} meter dari kantor.</span>
+          </div>
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- RINGKASAN MINGGU INI (tidak berubah) -->
+    <v-row class="mt-6">
+      <v-col cols="12">
+        <v-card class="glass-card rounded-xl pa-5 pa-sm-6" elevation="8">
+          <!-- ... konten mingguan sama persis ... -->
+          <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-4">
+            <h2 class="text-h5 font-weight-bold d-flex align-center">
+              <v-icon icon="mdi-chart-bar" color="primary" class="mr-2" /> Minggu Ini
+            </h2>
+            <v-chip variant="tonal" color="grey-darken-2" size="small" class="font-weight-medium">{{ history.length }} hari tercatat</v-chip>
+          </div>
+          <p class="text-body-2 text-medium-emphasis mb-4">Status kehadiran 7 hari terakhir (termasuk hari ini).</p>
+          <div v-if="!historyLoading && history.length" class="d-flex ga-2 flex-wrap justify-space-between weekly-bar">
+            <div v-for="(day, idx) in weeklyDays" :key="idx" class="weekly-day text-center" :class="{ 'text-primary': day.isToday }">
+              <div class="text-caption font-weight-medium">{{ day.label }}</div>
+              <v-icon :icon="day.icon" :color="day.color" size="24" class="my-1" />
+              <div class="text-caption">{{ day.date }}</div>
+            </div>
+          </div>
+          <div v-else-if="historyLoading" class="text-center py-4"><v-progress-circular indeterminate size="24" color="primary" /></div>
+          <div v-else class="text-center py-4 text-medium-emphasis">Belum ada data minggu ini.</div>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Prediksi Risiko (sama) -->
+    <v-row>
+      <v-col>
+        <v-card class="glass-card rounded-xl pa-4 mb-4" elevation="6">
+          <div class="d-flex align-center justify-space-between">
+            <div><div class="text-subtitle-2 font-weight-medium">Prediksi Besok</div><div class="text-h6 font-weight-bold">Risiko Keterlambatan</div></div>
+            <div class="text-h4 font-weight-bold" :class="'text-' + riskPrediction.color">{{ riskPrediction.score }}%</div>
+          </div>
+          <v-progress-linear :model-value="riskPrediction.score" :color="riskPrediction.color" height="10" rounded class="mt-3" />
+          <div class="d-flex justify-space-between mt-3">
+            <span class="text-caption">Level: <b>{{ riskPrediction.label }}</b></span>
+            <span class="text-caption">{{ riskPrediction.insight }}</span>
+          </div>
+          <v-alert v-if="riskPrediction.notification" type="warning" variant="tonal" class="mt-3" density="comfortable" border="start">
+            {{ riskPrediction.notification }}
+          </v-alert>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Riwayat Lengkap (sama) -->
+    <v-row class="mt-5">
+      <v-col cols="12">
+        <v-card class="glass-card rounded-xl pa-5 pa-sm-6" elevation="8">
+          <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-4">
+            <h2 class="text-h5 font-weight-bold d-flex align-center"><v-icon icon="mdi-history" color="primary" class="mr-2" /> Riwayat Absensi</h2>
+            <v-btn variant="text" size="small" color="primary" @click="loadHistory7Days" :loading="historyLoading"><v-icon start icon="mdi-refresh" /> Muat Ulang</v-btn>
+          </div>
+          <v-divider class="mb-4" />
+          <div v-if="historyLoading" class="text-center py-6"><v-progress-circular indeterminate size="32" color="primary" /></div>
+          <div v-else-if="!history.length" class="text-center py-6"><v-icon icon="mdi-inbox-outline" size="48" color="grey-lighten-1" class="mb-2" /><p class="text-medium-emphasis">Belum ada riwayat absensi.</p></div>
+          <div v-else class="table-responsive">
+            <v-table density="comfortable" class="history-table">
+              <thead><tr><th>Tanggal</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr v-for="row in history" :key="row.id">
+                  <td class="font-weight-medium">{{ formatDate(row.checkin_date) }}</td>
+                  <td>{{ row.checkin_time || "—" }}</td>
+                  <td>{{ row.checkout_time || "—" }}</td>
+                  <td><v-chip size="x-small" variant="flat" :color="row.checkout_time ? 'success' : row.checkin_time ? 'primary' : 'grey'" class="text-white font-weight-bold text-uppercase">{{ row.checkout_time ? "Lengkap" : row.checkin_time ? "Check-in" : "Tidak Hadir" }}</v-chip></td>
+                </tr>
+              </tbody>
+            </v-table>
+          </div>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-row v-if="errorMsg" class="mt-4">
+      <v-col cols="12">
+        <v-alert type="error" variant="tonal" density="compact" rounded="lg" dismissible @click:close="errorMsg = ''">{{ errorMsg }}</v-alert>
+      </v-col>
+    </v-row>
   </v-container>
-
-
-  <v-app class="app-bg">
-    <v-main>
-      <v-container fluid class="pa-0">
-        <v-container class="py-8 px-4 px-md-8 px-lg-12" style="max-width: 1300px; position: relative; z-index: 1;">
-          <!-- STATUS & AKSI -->
-          <v-row class="mt-6">
-
-            <!-- Kartu Aksi Cepat (DITAMBAH FITUR LOKASI) -->
-            <v-col cols="12" md="5" lg="4">
-              <v-card class="glass-card rounded-xl pa-5 pa-sm-6 h-100 d-flex flex-column" elevation="8">
-                <h2 class="text-h5 font-weight-bold d-flex align-center mb-3">
-                  <v-icon icon="mdi-flash" color="amber" class="mr-2" />
-                  Aksi Cepat
-                </h2>
-                <p class="text-body-2 text-medium-emphasis mb-4">Tombol otomatis aktif berdasarkan status Anda.</p>
-
-                <!-- STATUS LOKASI (baru) -->
-                <v-alert v-if="locationError" type="error" variant="tonal" density="compact" class="mb-3">
-                  {{ locationError }}
-                </v-alert>
-                <v-chip v-else-if="locationLoading" variant="light" color="info" class="mb-3">
-                  <v-icon start icon="mdi-map-marker-radius" /> Mengambil lokasi...
-                </v-chip>
-                <v-chip v-else-if="isWithinRadius === true" variant="flat" color="success" class="mb-3">
-                  <v-icon start icon="mdi-check-decagram" /> Dalam Radius Kantor
-                </v-chip>
-                <v-chip v-else-if="isWithinRadius === false" variant="flat" color="error" class="mb-3">
-                  <v-icon start icon="mdi-close-circle" /> Luar Radius Kantor
-                </v-chip>
-                <v-chip v-else variant="tonal" color="grey" class="mb-3">
-                  <v-icon start icon="mdi-map-marker-question" /> Lokasi belum diperiksa
-                </v-chip>
-
-                <div class="d-flex flex-column ga-3 mt-auto">
-                  <v-btn
-                    size="x-large" block rounded="lg" color="success" variant="flat"
-                    :loading="actionLoading" :disabled="!canCheckin || !isWithinRadius || locationLoading"
-                    @click="doCheckin" class="action-btn" elevation="4"
-                  >
-                    <v-icon start icon="mdi-login-variant" size="28" /> Check-in
-                  </v-btn>
-                  <v-btn
-                    size="x-large" block rounded="lg" color="primary" variant="flat"
-                    :loading="actionLoading" :disabled="!canCheckout || !isWithinRadius || locationLoading"
-                    @click="doCheckout" class="action-btn" elevation="4"
-                  >
-                    <v-icon start icon="mdi-logout-variant" size="28" /> Check-out
-                  </v-btn>
-                  <!-- Tombol periksa lokasi manual -->
-                  <v-btn
-                    size="large" block rounded="lg" variant="text" color="info"
-                    :loading="locationLoading" @click="checkLocationManual"
-                  >
-                    <v-icon start icon="mdi-crosshairs-gps" /> Periksa Lokasi Saya
-                  </v-btn>
-                </div>
-
-                <v-divider class="my-4" />
-                <div class="d-flex align-start ga-2 text-caption text-medium-emphasis">
-                  <v-icon icon="mdi-information-outline" size="16" color="grey-darken-1" />
-                  <span>Absensi hanya bisa dilakukan dalam radius {{ RADIUS_METERS }} meter dari kantor.</span>
-                </div>
-              </v-card>
-            </v-col>
-          </v-row>
-
-          <!-- RINGKASAN MINGGU INI (tidak berubah) -->
-          <v-row class="mt-6">
-            <v-col cols="12">
-              <v-card class="glass-card rounded-xl pa-5 pa-sm-6" elevation="8">
-                <!-- ... konten mingguan sama persis ... -->
-                <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-4">
-                  <h2 class="text-h5 font-weight-bold d-flex align-center">
-                    <v-icon icon="mdi-chart-bar" color="primary" class="mr-2" /> Minggu Ini
-                  </h2>
-                  <v-chip variant="tonal" color="grey-darken-2" size="small" class="font-weight-medium">{{ history.length }} hari tercatat</v-chip>
-                </div>
-                <p class="text-body-2 text-medium-emphasis mb-4">Status kehadiran 7 hari terakhir (termasuk hari ini).</p>
-                <div v-if="!historyLoading && history.length" class="d-flex ga-2 flex-wrap justify-space-between weekly-bar">
-                  <div v-for="(day, idx) in weeklyDays" :key="idx" class="weekly-day text-center" :class="{ 'text-primary': day.isToday }">
-                    <div class="text-caption font-weight-medium">{{ day.label }}</div>
-                    <v-icon :icon="day.icon" :color="day.color" size="24" class="my-1" />
-                    <div class="text-caption">{{ day.date }}</div>
-                  </div>
-                </div>
-                <div v-else-if="historyLoading" class="text-center py-4"><v-progress-circular indeterminate size="24" color="primary" /></div>
-                <div v-else class="text-center py-4 text-medium-emphasis">Belum ada data minggu ini.</div>
-              </v-card>
-            </v-col>
-          </v-row>
-
-          <!-- Prediksi Risiko (sama) -->
-          <v-row>
-            <v-col>
-              <v-card class="glass-card rounded-xl pa-4 mb-4" elevation="6">
-                <div class="d-flex align-center justify-space-between">
-                  <div><div class="text-subtitle-2 font-weight-medium">Prediksi Besok</div><div class="text-h6 font-weight-bold">Risiko Keterlambatan</div></div>
-                  <div class="text-h4 font-weight-bold" :class="'text-' + riskPrediction.color">{{ riskPrediction.score }}%</div>
-                </div>
-                <v-progress-linear :model-value="riskPrediction.score" :color="riskPrediction.color" height="10" rounded class="mt-3" />
-                <div class="d-flex justify-space-between mt-3">
-                  <span class="text-caption">Level: <b>{{ riskPrediction.label }}</b></span>
-                  <span class="text-caption">{{ riskPrediction.insight }}</span>
-                </div>
-                <v-alert v-if="riskPrediction.notification" type="warning" variant="tonal" class="mt-3" density="comfortable" border="start">
-                  {{ riskPrediction.notification }}
-                </v-alert>
-              </v-card>
-            </v-col>
-          </v-row>
-
-          <!-- Riwayat Lengkap (sama) -->
-          <v-row class="mt-5">
-            <v-col cols="12">
-              <v-card class="glass-card rounded-xl pa-5 pa-sm-6" elevation="8">
-                <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-4">
-                  <h2 class="text-h5 font-weight-bold d-flex align-center"><v-icon icon="mdi-history" color="primary" class="mr-2" /> Riwayat Absensi</h2>
-                  <v-btn variant="text" size="small" color="primary" @click="loadHistory7Days" :loading="historyLoading"><v-icon start icon="mdi-refresh" /> Muat Ulang</v-btn>
-                </div>
-                <v-divider class="mb-4" />
-                <div v-if="historyLoading" class="text-center py-6"><v-progress-circular indeterminate size="32" color="primary" /></div>
-                <div v-else-if="!history.length" class="text-center py-6"><v-icon icon="mdi-inbox-outline" size="48" color="grey-lighten-1" class="mb-2" /><p class="text-medium-emphasis">Belum ada riwayat absensi.</p></div>
-                <div v-else class="table-responsive">
-                  <v-table density="comfortable" class="history-table">
-                    <thead><tr><th>Tanggal</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr></thead>
-                    <tbody>
-                      <tr v-for="row in history" :key="row.id">
-                        <td class="font-weight-medium">{{ formatDate(row.checkin_date) }}</td>
-                        <td>{{ row.checkin_time || "—" }}</td>
-                        <td>{{ row.checkout_time || "—" }}</td>
-                        <td><v-chip size="x-small" variant="flat" :color="row.checkout_time ? 'success' : row.checkin_time ? 'primary' : 'grey'" class="text-white font-weight-bold text-uppercase">{{ row.checkout_time ? "Lengkap" : row.checkin_time ? "Check-in" : "Tidak Hadir" }}</v-chip></td>
-                      </tr>
-                    </tbody>
-                  </v-table>
-                </div>
-              </v-card>
-            </v-col>
-          </v-row>
-
-          <v-row v-if="errorMsg" class="mt-4">
-            <v-col cols="12">
-              <v-alert type="error" variant="tonal" density="compact" rounded="lg" dismissible @click:close="errorMsg = ''">{{ errorMsg }}</v-alert>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-container>
-    </v-main>
-    <v-snackbar v-model="snackbar.show" :timeout="2500" location="top right" color="surface-variant" variant="flat">
-      <span class="text-body-2">{{ snackbar.text }}</span>
-    </v-snackbar>
-  </v-app>
 </template>
 
 <script setup>

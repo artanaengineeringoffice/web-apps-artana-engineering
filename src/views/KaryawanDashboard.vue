@@ -1,36 +1,40 @@
 <template>   
+  <v-snackbar v-model="snackbar.show" timeout="2500" location="top right" color="black" variant="flat">
+        <span class="text-body-2">{{ snackbar.text }}</span>
+  </v-snackbar> 
+  
   <v-container>
-    <v-snackbar v-model="snackbar.show" timeout="2500" location="top right" color="black" variant="flat">
-          <span class="text-body-2">{{ snackbar.text }}</span>
-    </v-snackbar>
-    
-
     <!--HEADER-->
     <v-row>
       <v-col cols="12">
-        <v-card class="pa-4 d-flex justify-space-between align-center" color="deep-purple" elevation="10" rounded="xl">
-          <div class="d-flex">
-            <v-avatar size="60" class="pa-1">
-              <v-img v-if="profile?.avatar_url" :src="profile.avatar_url" cover rounded="xl" />
-              <v-icon v-else icon="mdi-account-circle" size="60" color="deep-purple-lighten-3" />
-            </v-avatar>
-            <div class="ml-4">
-              <p>{{ greeting }},</p>
-              <p class="text-h5 text-capitalize font-weight-bold">{{ profile?.full_name || "Karyawan" }}</p>
+        <v-card class="pa-4" color="blue-darken-3" elevation="5" rounded="xl">
+          <div class="d-flex justify-space-between align-center">
+            <div class="d-flex">
+              <v-avatar size="50" class="pa-1">
+                <v-img v-if="profile?.avatar_url" :src="profile.avatar_url" cover rounded="xl" />
+                <v-icon v-else icon="mdi-account-circle" size="60" color="deep-purple-lighten-3" />
+              </v-avatar>
+              <div class="ml-4 my-auto">
+                <p class="text-body-2">{{ greeting }},</p>
+                <p class="text-h6 text-capitalize font-weight-bold">{{ profile?.full_name || "Karyawan" }}</p>
+              </div>
+            </div>
+            <div class="d-flex">
+              <v-btn icon="mdi-sync" size="small" :loading="syncing" @click="refreshAll" variant="tonal" />
+              <v-btn @click="logout" class="ml-4" color="white" icon="mdi-logout" size="small" variant="flat" />            
             </div>
           </div>
-          <v-btn @click="logout" icon="mdi-logout" size="small" variant="tonal" />
-          <v-btn icon="mdi-sync" size="small" :loading="syncing" @click="refreshAll" variant="tonal" />
-        </v-card>
-      </v-col>
-      <v-col>
-        <v-card class="pa-4 d-flex justify-space-between align-center" elevation="10" rounded="xl">
-          <div class="d-flex">
-            <v-icon class="my-auto" start icon="mdi-calendar-blank" size="small" />
-            <p>{{ todayLabel }},</p>
-            <p>{{ todayDate }}</p>
+
+          <v-divider class="my-4" />
+
+          <div class="d-flex justify-space-between align-center">
+            <div class="d-flex">
+              <v-icon class="my-auto" start icon="mdi-calendar-blank" size="x-small" />
+              <p class="text-body-2">{{ todayLabel }},</p>
+              <p class="text-body-2">{{ todayDate }}</p>
+            </div>
+            <p class="text-h6 font-weight-bold">{{ liveClock }}</p>
           </div>
-          <p class="text-h5">{{ liveClock }}</p>
         </v-card>
       </v-col>
     </v-row>
@@ -38,7 +42,7 @@
     <!--STATUS HARI INI-->
     <v-row>
       <v-col>
-        <v-card class="pa-4" elevation="10" rounded="xl">
+        <v-card id="cardBoard" class="pa-4" rounded="xl">
           <div  @click="show = !show" class="d-flex justify-space-between">
             <div class="d-flex">
               <v-icon start class="my-auto" :icon="show ? 'mdi-chevron-up' : 'mdi-chevron-down'"/>
@@ -99,11 +103,11 @@
     </v-row>
 
     <!-- STATUS & AKSI -->
-    <v-row class="mt-6">
+    <v-row>
 
       <!-- Kartu Aksi Cepat (DITAMBAH FITUR LOKASI) -->
       <v-col cols="12" md="5" lg="4">
-        <v-card class="glass-card rounded-xl pa-5 pa-sm-6 h-100 d-flex flex-column" elevation="8">
+        <v-card id="cardBoard" class="glass-card rounded-xl pa-5 pa-sm-6 h-100 d-flex flex-column">
           <h2 class="text-h5 font-weight-bold d-flex align-center mb-3">
             <v-icon icon="mdi-flash" color="amber" class="mr-2" />
             Aksi Cepat
@@ -117,10 +121,10 @@
           <v-chip v-else-if="locationLoading" variant="light" color="info" class="mb-3">
             <v-icon start icon="mdi-map-marker-radius" /> Mengambil lokasi...
           </v-chip>
-          <v-chip v-else-if="isWithinRadius === true" variant="flat" color="success" class="mb-3">
+          <v-chip v-else-if="isWithinRadius === true" variant="tonal" color="success" class="mb-3">
             <v-icon start icon="mdi-check-decagram" /> Dalam Radius Kantor
           </v-chip>
-          <v-chip v-else-if="isWithinRadius === false" variant="flat" color="error" class="mb-3">
+          <v-chip v-else-if="isWithinRadius === false" variant="tonal" color="error" class="mb-3">
             <v-icon start icon="mdi-close-circle" /> Luar Radius Kantor
           </v-chip>
           <v-chip v-else variant="tonal" color="grey" class="mb-3">
@@ -129,22 +133,43 @@
 
           <div class="d-flex flex-column ga-3 mt-auto">
             <v-btn
-              size="x-large" block rounded="lg" color="success" variant="flat"
-              :loading="actionLoading" :disabled="!canCheckin || !isWithinRadius || locationLoading"
-              @click="doCheckin" class="action-btn" elevation="4"
+              size="x-large"
+              block
+              rounded="xl"
+              :color="canCheckin && isWithinRadius && !locationLoading ? 'success' : 'grey'"
+              :variant="canCheckin && isWithinRadius && !locationLoading ? 'flat' : 'tonal'"
+              :class="[
+                'action-btn',
+                canCheckin && isWithinRadius && !locationLoading ? 'btn-active' : 'btn-disabled'
+              ]"
+              :loading="actionLoading"
+              :disabled="!canCheckin || !isWithinRadius || locationLoading"
+              @click="doCheckin"
             >
-              <v-icon start icon="mdi-login-variant" size="28" /> Check-in
+              <v-icon start icon="mdi-login-variant" size="28" />
+              Check-in
             </v-btn>
+
             <v-btn
-              size="x-large" block rounded="lg" color="primary" variant="flat"
-              :loading="actionLoading" :disabled="!canCheckout || !isWithinRadius || locationLoading"
-              @click="doCheckout" class="action-btn" elevation="4"
+              size="x-large"
+              block
+              rounded="xl"
+              :color="canCheckout && isWithinRadius && !locationLoading ? 'primary' : 'grey'"
+              :variant="canCheckout && isWithinRadius && !locationLoading ? 'flat' : 'tonal'"
+              :class="[
+                'action-btn',
+                canCheckout && isWithinRadius && !locationLoading ? 'btn-active' : 'btn-disabled'
+              ]"
+              :loading="actionLoading"
+              :disabled="!canCheckout || !isWithinRadius || locationLoading"
+              @click="doCheckout"
             >
-              <v-icon start icon="mdi-logout-variant" size="28" /> Check-out
+              <v-icon start icon="mdi-logout-variant" size="28" />
+              Check-out
             </v-btn>
             <!-- Tombol periksa lokasi manual -->
             <v-btn
-              size="large" block rounded="lg" variant="text" color="info"
+              size="large" block rounded="xl" variant="text" color="info"
               :loading="locationLoading" @click="checkLocationManual"
             >
               <v-icon start icon="mdi-crosshairs-gps" /> Periksa Lokasi Saya
@@ -161,9 +186,9 @@
     </v-row>
 
     <!-- RINGKASAN MINGGU INI (tidak berubah) -->
-    <v-row class="mt-6">
+    <v-row>
       <v-col cols="12">
-        <v-card class="glass-card rounded-xl pa-5 pa-sm-6" elevation="8">
+        <v-card id="cardBoard" class="glass-card rounded-xl pa-5 pa-sm-6">
           <!-- ... konten mingguan sama persis ... -->
           <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-4">
             <h2 class="text-h5 font-weight-bold d-flex align-center">
@@ -188,7 +213,7 @@
     <!-- Prediksi Risiko (sama) -->
     <v-row>
       <v-col>
-        <v-card class="glass-card rounded-xl pa-4 mb-4" elevation="6">
+        <v-card id="cardBoard" class="glass-card rounded-xl pa-4">
           <div class="d-flex align-center justify-space-between">
             <div><div class="text-subtitle-2 font-weight-medium">Prediksi Besok</div><div class="text-h6 font-weight-bold">Risiko Keterlambatan</div></div>
             <div class="text-h4 font-weight-bold" :class="'text-' + riskPrediction.color">{{ riskPrediction.score }}%</div>
@@ -206,9 +231,9 @@
     </v-row>
 
     <!-- Riwayat Lengkap (sama) -->
-    <v-row class="mt-5">
+    <v-row>
       <v-col cols="12">
-        <v-card class="glass-card rounded-xl pa-5 pa-sm-6" elevation="8">
+        <v-card id="cardBoard" class="glass-card rounded-xl pa-5 pa-sm-6">
           <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-4">
             <h2 class="text-h5 font-weight-bold d-flex align-center"><v-icon icon="mdi-history" color="primary" class="mr-2" /> Riwayat Absensi</h2>
             <v-btn variant="text" size="small" color="primary" @click="loadHistory7Days" :loading="historyLoading"><v-icon start icon="mdi-refresh" /> Muat Ulang</v-btn>
@@ -527,6 +552,21 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.btn-active {
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+}
+
+.btn-disabled {
+  box-shadow: none !important;
+  opacity: 0.7;
+}
+
+.btn-active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+}
+
 .banner-card {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   border: none;

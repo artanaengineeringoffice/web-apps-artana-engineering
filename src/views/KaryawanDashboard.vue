@@ -279,8 +279,8 @@ import { supabase } from "../lib/supabase";
 const show = ref(false)
 
 // === KONFIGURASI LOKASI KANTOR ===
-const OFFICE_LAT = -6.589203;   // Ganti dengan latitude kantor anda , , 
-const OFFICE_LNG = 107.474524;  // Ganti dengan longitude kantor anda
+const OFFICE_LAT = -6.5135;   // Ganti dengan latitude kantor anda
+const OFFICE_LNG = 107.4566;  // Ganti dengan longitude kantor anda
 const RADIUS_METERS = 200;      // radius dalam meter
 
 

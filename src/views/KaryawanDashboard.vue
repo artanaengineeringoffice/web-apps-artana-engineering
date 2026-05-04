@@ -14,7 +14,7 @@
               <p class="text-h5 text-capitalize font-weight-bold">{{ profile?.full_name || "Karyawan" }}</p>
             </div>
           </div>
-          <v-btn icon="mdi-logout" size="small" variant="tonal" />
+          <v-btn @click="logout" icon="mdi-logout" size="small" variant="tonal" />
           <v-btn icon="mdi-sync" size="small" :loading="syncing" @click="refreshAll" variant="tonal" />
         </v-card>
       </v-col>
@@ -89,6 +89,29 @@
               </v-card-text>
             </div>
           </v-expand-transition>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <v-col>
+        <v-card class="pa-4" rounded="xl" elevation="10">
+          <div class="d-flex">
+            <v-icon start color="amber" size="35">mdi-flash</v-icon>
+            <p class="my-auto text-h5 font-weight-bold">Aksi Cepat</p>
+          </div>
+          <p class="text-body-2 mt-4 text-grey">Tombol otomatis aktif berdasarkan lokasi Anda.</p>
+          
+          <v-chip rounded="xl" variant="tonal" color="error" class="my-4">
+            <v-icon start icon="mdi-close-circle" /> Luar Radius Kantor
+          </v-chip>
+          <v-chip class="my-4" variant="text" color="grey" start prepend-icon="mdi-map-marker-question" text="Lokasi belum diperiksa" />
+          
+          <v-btn rounded="xl" elevation="5" variant="flat" color="info"
+            :loading="locationLoading" @click="checkLocationManual"   
+          >
+            <v-icon start icon="mdi-crosshairs-gps" /> Periksa Lokasi Saya
+          </v-btn>
         </v-card>
       </v-col>
     </v-row>
@@ -436,6 +459,7 @@ const loadProfile = async () => {
   if (error) errorMsg.value = error.message;
   profile.value = data;
   loadingProfile.value = false;
+  //console.log('user', data.avatar_url)
 };
 
 const loadTodayAttendance = async () => {

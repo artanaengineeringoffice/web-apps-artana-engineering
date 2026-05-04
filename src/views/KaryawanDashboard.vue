@@ -553,7 +553,7 @@ onMounted(async () => {
 
 <style scoped>
 .btn-active {
-  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
   transition: all 0.2s ease;
 }
 
@@ -577,10 +577,8 @@ onMounted(async () => {
   box-shadow: 0 8px 20px rgba(0,0,0,0.25);
 }
 .glass-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  transition: transform 0.2s, box-shadow 0.2s;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 .glass-card:hover {
   transform: translateY(-2px);

@@ -1,8 +1,22 @@
 <template>
-  <div style="padding: 40px; text-align: center">
-    <h2>Logging you in...</h2>
-    <p>Tunggu sebentar...</p>
-  </div>
+  <v-container class="fill-height">
+    <v-row justify="center" class="fill-height">
+      <v-col cols="10" class="d-flex justify-center align-center">
+        <v-sheet id="cardBoard" rounded="xl" class="text-center pa-4">
+          <v-icon icon="mdi-shield-check-outline" size="42" color="primary" class="mb-4" />
+          <h2 class="text-h6 font-weight-bold">Mengautentikasi...</h2>
+          <p class="text-body-2 mt-4">Kami sedang memproses login Anda. Mohon tunggu sebentar.</p>
+          <v-progress-circular
+            indeterminate
+            size="30"
+            width="2"
+            color="primary"
+            class="mt-6"
+          />
+        </v-sheet>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup>
@@ -66,3 +80,22 @@ if (upsertError) {
 });
 </script>
 
+<style scoped>
+.callback-container {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.callback-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  border-radius: 20px;
+  padding: 40px 32px;
+  text-align: center;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+</style>

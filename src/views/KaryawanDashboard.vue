@@ -7,7 +7,7 @@
     <!--HEADER-->
     <v-row>
       <v-col cols="12">
-        <v-card class="pa-4" color="blue-darken-3" elevation="5" rounded="xl">
+        <v-sheet class="pa-4" color="blue-darken-3" elevation="5" rounded="xl">
           <div class="d-flex justify-space-between align-center">
             <div class="d-flex">
               <v-avatar size="50" class="pa-1">
@@ -35,15 +35,15 @@
             </div>
             <p class="text-h6 font-weight-bold">{{ liveClock }}</p>
           </div>
-        </v-card>
+        </v-sheet>
       </v-col>
     </v-row>
 
     <!--STATUS HARI INI-->
     <v-row>
       <v-col>
-        <v-card id="cardBoard" class="pa-4" rounded="xl">
-          <div  @click="show = !show" class="d-flex justify-space-between">
+        <v-sheet id="cardBoard" class="pa-4" rounded="xl">
+          <div @click="show = !show" class="d-flex justify-space-between">
             <div class="d-flex">
               <v-icon start class="my-auto" :icon="show ? 'mdi-chevron-up' : 'mdi-chevron-down'"/>
               <p class="my-auto">Status Hari Ini</p>
@@ -55,7 +55,7 @@
             <div v-show="show">
               <v-divider class="mt-4" />              
 
-              <v-card-text class="text-center">
+              <v-sheet-text class="text-center">
                 <v-row no-gutters>
                   <v-col cols="6" class="d-flex align-center">
                     <p class="text-left">Rekaman kehadiran Anda untuk {{ todayLabel }}</p>
@@ -95,19 +95,18 @@
                     <span class="font-weight-bold">{{ attendanceToday?.checkout_time || "—" }}</span>
                   </div>
                 </div>
-              </v-card-text>
+              </v-sheet-text>
             </div>
           </v-expand-transition>
-        </v-card>
+        </v-sheet>
       </v-col>
     </v-row>
 
     <!-- STATUS & AKSI -->
     <v-row>
-
       <!-- Kartu Aksi Cepat (DITAMBAH FITUR LOKASI) -->
       <v-col cols="12" md="5" lg="4">
-        <v-card id="cardBoard" class="glass-card rounded-xl pa-5 pa-sm-6 h-100 d-flex flex-column">
+        <v-sheet id="cardBoard" class="rounded-xl pa-5 pa-sm-6 h-100 d-flex flex-column">
           <h2 class="text-h5 font-weight-bold d-flex align-center mb-3">
             <v-icon icon="mdi-flash" color="amber" class="mr-2" />
             Aksi Cepat
@@ -167,6 +166,7 @@
               <v-icon start icon="mdi-logout-variant" size="28" />
               Check-out
             </v-btn>
+
             <!-- Tombol periksa lokasi manual -->
             <v-btn
               size="large" block rounded="xl" variant="text" color="info"
@@ -181,80 +181,151 @@
             <v-icon icon="mdi-information-outline" size="16" color="grey-darken-1" />
             <span>Absensi hanya bisa dilakukan dalam radius {{ RADIUS_METERS }} meter dari kantor.</span>
           </div>
-        </v-card>
+        </v-sheet>
       </v-col>
     </v-row>
 
     <!-- RINGKASAN MINGGU INI (tidak berubah) -->
     <v-row>
       <v-col cols="12">
-        <v-card id="cardBoard" class="glass-card rounded-xl pa-5 pa-sm-6">
+        <v-sheet id="cardBoard" class="rounded-xl pa-5 pa-sm-6">
           <!-- ... konten mingguan sama persis ... -->
           <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-4">
             <h2 class="text-h5 font-weight-bold d-flex align-center">
               <v-icon icon="mdi-chart-bar" color="primary" class="mr-2" /> Minggu Ini
             </h2>
-            <v-chip variant="tonal" color="grey-darken-2" size="small" class="font-weight-medium">{{ history.length }} hari tercatat</v-chip>
+            <v-chip variant="tonal" color="grey-darken-2" size="small" class="font-weight-medium">
+              {{ history.length }} hari tercatat
+            </v-chip>
           </div>
-          <p class="text-body-2 text-medium-emphasis mb-4">Status kehadiran 7 hari terakhir (termasuk hari ini).</p>
-          <div v-if="!historyLoading && history.length" class="d-flex ga-2 flex-wrap justify-space-between weekly-bar">
-            <div v-for="(day, idx) in weeklyDays" :key="idx" class="weekly-day text-center" :class="{ 'text-primary': day.isToday }">
+
+          <p class="text-body-2 text-medium-emphasis mb-4">
+            Status kehadiran 7 hari terakhir (termasuk hari ini).
+          </p>
+
+          <div v-if="!historyLoading && history.length" class="d-flex ga-2 flex-wrap justify-space-between">
+            <div
+              v-for="(day, idx) in weeklyDays"
+              :key="idx"
+              class="weekly-day text-center"
+              :class="{ 'text-primary': day.isToday }"
+            >
               <div class="text-caption font-weight-medium">{{ day.label }}</div>
               <v-icon :icon="day.icon" :color="day.color" size="24" class="my-1" />
               <div class="text-caption">{{ day.date }}</div>
             </div>
           </div>
-          <div v-else-if="historyLoading" class="text-center py-4"><v-progress-circular indeterminate size="24" color="primary" /></div>
-          <div v-else class="text-center py-4 text-medium-emphasis">Belum ada data minggu ini.</div>
-        </v-card>
+
+          <div v-else-if="historyLoading" class="text-center py-4">
+            <v-progress-circular indeterminate size="24" color="primary" />
+          </div>
+
+          <div v-else class="text-center py-4 text-medium-emphasis">
+            Belum ada data minggu ini.
+          </div>
+        </v-sheet>
       </v-col>
     </v-row>
 
     <!-- Prediksi Risiko (sama) -->
     <v-row>
       <v-col>
-        <v-card id="cardBoard" class="glass-card rounded-xl pa-4">
+        <v-sheet id="cardBoard" class="rounded-xl pa-4">
           <div class="d-flex align-center justify-space-between">
-            <div><div class="text-subtitle-2 font-weight-medium">Prediksi Besok</div><div class="text-h6 font-weight-bold">Risiko Keterlambatan</div></div>
-            <div class="text-h4 font-weight-bold" :class="'text-' + riskPrediction.color">{{ riskPrediction.score }}%</div>
+            <div>
+              <div class="text-subtitle-2 font-weight-medium">Prediksi Besok</div>
+              <div class="text-h6 font-weight-bold">Risiko Keterlambatan</div>
+            </div>
+            <div class="text-h4 font-weight-bold" :class="'text-' + riskPrediction.color">
+              {{ riskPrediction.score }}%
+            </div>
           </div>
-          <v-progress-linear :model-value="riskPrediction.score" :color="riskPrediction.color" height="10" rounded class="mt-3" />
+
+          <v-progress-linear
+            :model-value="riskPrediction.score"
+            :color="riskPrediction.color"
+            height="10"
+            rounded
+            class="mt-3"
+          />
+
           <div class="d-flex justify-space-between mt-3">
-            <span class="text-caption">Level: <b>{{ riskPrediction.label }}</b></span>
-            <span class="text-caption">{{ riskPrediction.insight }}</span>
+            <span class="text-caption">
+              Level: <b>{{ riskPrediction.label }}</b>
+            </span>
+            <span class="text-caption">
+              {{ riskPrediction.insight }}
+            </span>
           </div>
-          <v-alert v-if="riskPrediction.notification" type="warning" variant="tonal" class="mt-3" density="comfortable" border="start">
+
+          <v-alert
+            v-if="riskPrediction.notification"
+            type="warning"
+            variant="tonal"
+            class="mt-3"
+            density="comfortable"
+            border="start"
+          >
             {{ riskPrediction.notification }}
           </v-alert>
-        </v-card>
+        </v-sheet>
       </v-col>
     </v-row>
 
     <!-- Riwayat Lengkap (sama) -->
     <v-row>
       <v-col cols="12">
-        <v-card id="cardBoard" class="glass-card rounded-xl pa-5 pa-sm-6">
+        <v-sheet id="cardBoard" class="rounded-xl pa-5 pa-sm-6">
           <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-4">
-            <h2 class="text-h5 font-weight-bold d-flex align-center"><v-icon icon="mdi-history" color="primary" class="mr-2" /> Riwayat Absensi</h2>
-            <v-btn variant="text" size="small" color="primary" @click="loadHistory7Days" :loading="historyLoading"><v-icon start icon="mdi-refresh" /> Muat Ulang</v-btn>
+            <h2 class="text-h5 font-weight-bold d-flex align-center">
+              <v-icon icon="mdi-history" color="primary" class="mr-2" /> Riwayat Absensi
+            </h2>
+            <v-btn variant="text" size="small" color="primary" @click="loadHistory7Days" :loading="historyLoading">
+              <v-icon start icon="mdi-refresh" /> Muat Ulang
+            </v-btn>
           </div>
+
           <v-divider class="mb-4" />
-          <div v-if="historyLoading" class="text-center py-6"><v-progress-circular indeterminate size="32" color="primary" /></div>
-          <div v-else-if="!history.length" class="text-center py-6"><v-icon icon="mdi-inbox-outline" size="48" color="grey-lighten-1" class="mb-2" /><p class="text-medium-emphasis">Belum ada riwayat absensi.</p></div>
+
+          <div v-if="historyLoading" class="text-center py-6">
+            <v-progress-circular indeterminate size="32" color="primary" />
+          </div>
+
+          <div v-else-if="!history.length" class="text-center py-6">
+            <v-icon icon="mdi-inbox-outline" size="48" color="grey-lighten-1" class="mb-2" />
+            <p class="text-medium-emphasis">Belum ada riwayat absensi.</p>
+          </div>
+
           <div v-else class="table-responsive">
             <v-table density="comfortable" class="history-table">
-              <thead><tr><th>Tanggal</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Check-in</th>
+                  <th>Check-out</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
               <tbody>
                 <tr v-for="row in history" :key="row.id">
                   <td class="font-weight-medium">{{ formatDate(row.checkin_date) }}</td>
                   <td>{{ row.checkin_time || "—" }}</td>
                   <td>{{ row.checkout_time || "—" }}</td>
-                  <td><v-chip size="x-small" variant="flat" :color="row.checkout_time ? 'success' : row.checkin_time ? 'primary' : 'grey'" class="text-white font-weight-bold text-uppercase">{{ row.checkout_time ? "Lengkap" : row.checkin_time ? "Check-in" : "Tidak Hadir" }}</v-chip></td>
+                  <td>
+                    <v-chip
+                      size="x-small"
+                      variant="flat"
+                      :color="row.checkout_time ? 'success' : row.checkin_time ? 'primary' : 'grey'"
+                      class="text-white font-weight-bold text-uppercase"
+                    >
+                      {{ row.checkout_time ? "Lengkap" : row.checkin_time ? "Check-in" : "Tidak Hadir" }}
+                    </v-chip>
+                  </td>
                 </tr>
               </tbody>
             </v-table>
           </div>
-        </v-card>
+        </v-sheet>
       </v-col>
     </v-row>
 
@@ -554,7 +625,6 @@ onMounted(async () => {
 <style scoped>
 .btn-active {
   box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-  transition: all 0.2s ease;
 }
 
 .btn-disabled {
@@ -576,22 +646,7 @@ onMounted(async () => {
   border: 3px solid rgba(255,255,255,0.6);
   box-shadow: 0 8px 20px rgba(0,0,0,0.25);
 }
-.glass-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-.glass-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 32px rgba(0,0,0,0.12);
-}
-.action-btn {
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: none;
-}
-.weekly-bar {
-  justify-content: center;
-}
+
 .weekly-day {
   flex: 1;
   min-width: 40px;

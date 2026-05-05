@@ -62,7 +62,8 @@ const loginWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: "https://web-apps-artana-engineering.vercel.app/auth/callback",
+        redirectTo: "http://localhost:5173/auth/callback",
+        //redirectTo: "https://web-apps-artana-engineering.vercel.app/auth/callback",
       },
     });
 

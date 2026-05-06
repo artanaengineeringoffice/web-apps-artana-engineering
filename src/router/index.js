@@ -9,6 +9,8 @@ import Order from "../views/Admin/Order.vue";
 import KaryawanDashboard from "../views/KaryawanDashboard.vue";
 import AuthCallback from "../views/AuthCallback.vue";
 
+import HistoryAbsen from "../views/Karyawan/HistoryAbsen.vue"
+
 const routes = [
   { path: "/", redirect: "/login" },
   { path: "/:pathMatch(.*)*", redirect: "/login" },
@@ -33,9 +35,16 @@ const routes = [
   },
 
 
+  // page karyawan
   {
     path: "/karyawan",
     component: KaryawanDashboard,
+    meta: { requiresAuth: true, role: "karyawan" },
+  },
+
+  {
+    path: "/karyawan/historyabsen",
+    component: HistoryAbsen,
     meta: { requiresAuth: true, role: "karyawan" },
   },
 ];

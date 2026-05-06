@@ -37,6 +37,7 @@
             </template>
             <span>{{ isDark ? 'Light mode' : 'Dark mode' }}</span>
           </v-tooltip>
+          <v-btn @click="logout" class="ml-4" color="white" icon="mdi-logout" size="small" variant="flat" />
         </div>
       </v-col>
     </v-row>
@@ -406,6 +407,11 @@ const toggleDarkMode = () => {
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
   document.documentElement.classList.toggle('dark', isDark.value)
 }
+
+const logout = async () => {
+  await supabase.auth.signOut();
+  router.replace("/login");
+};
 
 // ========== CONSTANTS ==========
 const BATAS = "08:00:00"

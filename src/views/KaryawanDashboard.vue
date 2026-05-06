@@ -1,4 +1,26 @@
 <template>   
+<!--APPBAR-->
+<v-app-bar flat scroll-behavior="hide inverted" style="border-bottom: 1px solid #E5E7EB;">
+  <template v-slot:prepend>
+    <div class="d-flex ml-2">
+      <v-avatar color="grey">
+        <v-img v-if="profile?.avatar_url" :src="profile.avatar_url" />
+      </v-avatar>
+      <div class="ml-3">
+        <p class="my-auto font-weight-bold">{{ profile?.full_name || "Karyawan" }}</p>
+        <p class="my-auto text-caption">{{ profile?.email || "Email" }}</p>
+      </div>
+    </div>
+  </template>
+
+  <template v-slot:append>
+    <v-btn icon="mdi-dots-verticalxxx" />
+  </template>
+</v-app-bar>
+
+
+
+<!--SNACKBAR-->
   <v-snackbar v-model="snackbar.show" timeout="2500" location="top right" color="black" variant="flat">
         <span class="text-body-2">{{ snackbar.text }}</span>
   </v-snackbar> 
@@ -341,6 +363,7 @@
 import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { supabase } from "../lib/supabase";
+import BottomNavigation from "../components/BottomNavigation.vue"
 
 const show = ref(false)
 

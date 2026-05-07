@@ -3,7 +3,7 @@
     <v-main class="bgApp">
       <router-view />
       <!--Bottom Navigation-->
-      <BottomNavigation />
+      <BottomNavigation v-if="showBottomNav" />
     </v-main>
 
     
@@ -12,6 +12,15 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
+import { useRoute } from "vue-router";
 import BottomNavigation from "./components/BottomNavigation.vue"
 
+const route = useRoute();
+
+const hideRoutes = ["/login"];
+
+const showBottomNav = computed(() => {
+  return !hideRoutes.includes(route.path);
+});
 </script>

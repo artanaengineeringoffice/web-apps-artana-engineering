@@ -18,8 +18,6 @@
   </template>
 </v-app-bar>
 
-
-
 <!--SNACKBAR-->
   <v-snackbar v-model="snackbar.show" timeout="2500" location="top right" color="black" variant="flat">
         <span class="text-body-2">{{ snackbar.text }}</span>
@@ -57,69 +55,6 @@
             </div>
             <p class="text-h6 font-weight-bold">{{ liveClock }}</p>
           </div>
-        </v-sheet>
-      </v-col>
-    </v-row>
-
-    <!--STATUS HARI INI-->
-    <v-row>
-      <v-col>
-        <v-sheet id="cardBoard" class="pa-4" rounded="xl">
-          <div @click="show = !show" class="d-flex justify-space-between">
-            <div class="d-flex">
-              <v-icon start class="my-auto" :icon="show ? 'mdi-chevron-up' : 'mdi-chevron-down'"/>
-              <p class="my-auto">Status Hari Ini</p>
-            </div>
-            <v-chip color="orange" variant="flat" class="text-white" :text="statusChip.text" /> 
-          </div>  
-
-          <v-expand-transition>
-            <div v-show="show">
-              <v-divider class="mt-4" />              
-
-              <v-sheet-text class="text-center">
-                <v-row no-gutters>
-                  <v-col cols="6" class="d-flex align-center">
-                    <p class="text-left">Rekaman kehadiran Anda untuk {{ todayLabel }}</p>
-                  </v-col>
-                  <v-col cols="6" class="d-flex justify-end">
-                    <v-progress-circular :model-value="attendanceProgress" :size="100" :width="10"
-                      :color="attendanceToday?.checkout_time ? 'success' : attendanceToday?.checkin_time ? 'primary' : 'grey-lighten-1'" rounded>
-                      <span class="text-h6 font-weight-bold">{{ attendanceProgress }}%</span>
-                    </v-progress-circular>
-                  </v-col>
-                </v-row>
-
-                <v-divider class="my-4" />
-
-                <div class="d-flex flex-column">
-                  <div class="d-flex justify-space-between">
-                    <div class="d-flex">
-                      <v-icon start icon="mdi-login" :color="attendanceToday?.checkin_time ? 'success' : 'grey'" />
-                      <div class="text-start">
-                        <p>Check-in</p>
-                        <p class="text-caption text-medium-emphasis">{{ attendanceToday?.checkin_time ? "Tercatat" : "Belum check-in" }}</p>
-                      </div>
-                    </div>
-                    <span class="font-weight-bold">{{ attendanceToday?.checkin_time || "—" }}</span>
-                  </div>
-                  
-                  <v-divider class="my-4" />
-
-                  <div class="d-flex justify-space-between">
-                    <div class="d-flex">
-                      <v-icon start icon="mdi-logout" :color="attendanceToday?.checkout_time ? 'primary' : 'grey'" />
-                      <div class="text-start">
-                        <p>Check-out</p>
-                        <p class="text-caption text-medium-emphasis">{{ attendanceToday?.checkout_time ? "Tercatat" : "Belum check-out" }}</p>
-                      </div>
-                    </div>
-                    <span class="font-weight-bold">{{ attendanceToday?.checkout_time || "—" }}</span>
-                  </div>
-                </div>
-              </v-sheet-text>
-            </div>
-          </v-expand-transition>
         </v-sheet>
       </v-col>
     </v-row>
@@ -207,6 +142,69 @@
       </v-col>
     </v-row>
 
+    <!--STATUS HARI INI-->
+    <v-row>
+      <v-col>
+        <v-sheet id="cardBoard" class="pa-4" rounded="xl">
+          <div @click="show = !show" class="d-flex justify-space-between">
+            <div class="d-flex">
+              <v-icon start class="my-auto" :icon="show ? 'mdi-chevron-up' : 'mdi-chevron-down'"/>
+              <p class="my-auto">Status Hari Ini</p>
+            </div>
+            <v-chip color="orange" variant="flat" class="text-white" :text="statusChip.text" /> 
+          </div>  
+
+          <v-expand-transition>
+            <div v-show="show">
+              <v-divider class="mt-4" />              
+
+              <v-sheet-text class="text-center">
+                <v-row no-gutters>
+                  <v-col cols="6" class="d-flex align-center">
+                    <p class="text-left">Rekaman kehadiran Anda untuk {{ todayLabel }}</p>
+                  </v-col>
+                  <v-col cols="6" class="d-flex justify-end">
+                    <v-progress-circular :model-value="attendanceProgress" :size="100" :width="10"
+                      :color="attendanceToday?.checkout_time ? 'success' : attendanceToday?.checkin_time ? 'primary' : 'grey-lighten-1'" rounded>
+                      <span class="text-h6 font-weight-bold">{{ attendanceProgress }}%</span>
+                    </v-progress-circular>
+                  </v-col>
+                </v-row>
+
+                <v-divider class="my-4" />
+
+                <div class="d-flex flex-column">
+                  <div class="d-flex justify-space-between">
+                    <div class="d-flex">
+                      <v-icon start icon="mdi-login" :color="attendanceToday?.checkin_time ? 'success' : 'grey'" />
+                      <div class="text-start">
+                        <p>Check-in</p>
+                        <p class="text-caption text-medium-emphasis">{{ attendanceToday?.checkin_time ? "Tercatat" : "Belum check-in" }}</p>
+                      </div>
+                    </div>
+                    <span class="font-weight-bold">{{ attendanceToday?.checkin_time || "—" }}</span>
+                  </div>
+                  
+                  <v-divider class="my-4" />
+
+                  <div class="d-flex justify-space-between">
+                    <div class="d-flex">
+                      <v-icon start icon="mdi-logout" :color="attendanceToday?.checkout_time ? 'primary' : 'grey'" />
+                      <div class="text-start">
+                        <p>Check-out</p>
+                        <p class="text-caption text-medium-emphasis">{{ attendanceToday?.checkout_time ? "Tercatat" : "Belum check-out" }}</p>
+                      </div>
+                    </div>
+                    <span class="font-weight-bold">{{ attendanceToday?.checkout_time || "—" }}</span>
+                  </div>
+                </div>
+              </v-sheet-text>
+            </div>
+          </v-expand-transition>
+        </v-sheet>
+      </v-col>
+    </v-row>
+
     <!-- RINGKASAN MINGGU INI (tidak berubah) -->
     <v-row>
       <v-col cols="12">
@@ -290,63 +288,6 @@
           >
             {{ riskPrediction.notification }}
           </v-alert>
-        </v-sheet>
-      </v-col>
-    </v-row>
-
-    <!-- Riwayat Lengkap (sama) -->
-    <v-row>
-      <v-col cols="12">
-        <v-sheet id="cardBoard" class="rounded-xl pa-5 pa-sm-6">
-          <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-4">
-            <h2 class="text-h5 font-weight-bold d-flex align-center">
-              <v-icon icon="mdi-history" color="primary" class="mr-2" /> Riwayat Absensi
-            </h2>
-            <v-btn variant="text" size="small" color="primary" @click="loadHistory7Days" :loading="historyLoading">
-              <v-icon start icon="mdi-refresh" /> Muat Ulang
-            </v-btn>
-          </div>
-
-          <v-divider class="mb-4" />
-
-          <div v-if="historyLoading" class="text-center py-6">
-            <v-progress-circular indeterminate size="32" color="primary" />
-          </div>
-
-          <div v-else-if="!history.length" class="text-center py-6">
-            <v-icon icon="mdi-inbox-outline" size="48" color="grey-lighten-1" class="mb-2" />
-            <p class="text-medium-emphasis">Belum ada riwayat absensi.</p>
-          </div>
-
-          <div v-else class="table-responsive">
-            <v-table density="comfortable" class="history-table">
-              <thead>
-                <tr>
-                  <th>Tanggal</th>
-                  <th>Check-in</th>
-                  <th>Check-out</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in history" :key="row.id">
-                  <td class="font-weight-medium">{{ formatDate(row.checkin_date) }}</td>
-                  <td>{{ row.checkin_time || "—" }}</td>
-                  <td>{{ row.checkout_time || "—" }}</td>
-                  <td>
-                    <v-chip
-                      size="x-small"
-                      variant="flat"
-                      :color="row.checkout_time ? 'success' : row.checkin_time ? 'primary' : 'grey'"
-                      class="text-white font-weight-bold text-uppercase"
-                    >
-                      {{ row.checkout_time ? "Lengkap" : row.checkin_time ? "Check-in" : "Tidak Hadir" }}
-                    </v-chip>
-                  </td>
-                </tr>
-              </tbody>
-            </v-table>
-          </div>
         </v-sheet>
       </v-col>
     </v-row>

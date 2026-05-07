@@ -18,7 +18,7 @@ import BottomNavigation from "./components/BottomNavigation.vue"
 
 const route = useRoute();
 
-const hideRoutes = ["/login", "/auth/callback"];
+const hideRoutes = ["/login", "/auth/callback", "/admin"];
 
 const showBottomNav = computed(() => {
   return !hideRoutes.includes(route.path);

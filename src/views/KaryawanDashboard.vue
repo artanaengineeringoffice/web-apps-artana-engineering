@@ -40,8 +40,8 @@
               </div>
             </div>
             <div class="d-flex">
-              <v-btn icon="mdi-sync" size="small" :loading="syncing" @click="refreshAll" variant="tonal" />
-              <v-btn @click="logout" class="ml-4" color="white" icon="mdi-logout" size="small" variant="flat" />            
+              <!--<v-btn icon="mdi-sync" size="small" :loading="syncing" @click="refreshAll" variant="tonal" />-->
+              <v-btn @click="logout" class="ml-4" elevation="10" color="white" icon="mdi-logout" size="small" variant="flat" />            
             </div>
           </div>
 
@@ -53,7 +53,7 @@
               <p class="text-body-2">{{ todayLabel }},</p>
               <p class="text-body-2">{{ todayDate }}</p>
             </div>
-            <p class="text-h6 font-weight-bold">{{ liveClock }}</p>
+            <v-chip size="small" color="orange" variant="flat" class="text-white" :text="statusChip.text" /> 
           </div>
         </v-sheet>
       </v-col>
@@ -83,12 +83,12 @@
           <v-chip v-else-if="isWithinRadius === false" variant="tonal" color="error" class="mb-3">
             <v-icon start icon="mdi-close-circle" /> Luar Radius Kantor
           </v-chip>
-          <v-chip v-else variant="tonal" color="grey" class="mb-3">
-            <v-icon start icon="mdi-map-marker-question" /> Lokasi belum diperiksa
+          <v-chip v-else variant="text" color="grey" class="mb-3">
+            <v-icon start icon="mdi-map-marker-question" />Lokasi belum diperiksa
           </v-chip>
 
           <div class="d-flex flex-column ga-3 mt-auto">
-            <v-btn
+            <v-btn class="font-weight-bold"
               size="x-large"
               block
               rounded="xl"
@@ -106,7 +106,7 @@
               Check-in
             </v-btn>
 
-            <v-btn
+            <v-btn class="font-weight-bold"
               size="x-large"
               block
               rounded="xl"
@@ -126,7 +126,7 @@
 
             <!-- Tombol periksa lokasi manual -->
             <v-btn
-              size="large" block rounded="xl" variant="text" color="info"
+              size="large" block rounded="xl" variant="tonal" color="info"
               :loading="locationLoading" @click="checkLocationManual"
             >
               <v-icon start icon="mdi-crosshairs-gps" /> Periksa Lokasi Saya
@@ -138,69 +138,6 @@
             <v-icon icon="mdi-information-outline" size="16" color="grey-darken-1" />
             <span>Absensi hanya bisa dilakukan dalam radius {{ RADIUS_METERS }} meter dari kantor.</span>
           </div>
-        </v-sheet>
-      </v-col>
-    </v-row>
-
-    <!--STATUS HARI INI-->
-    <v-row>
-      <v-col>
-        <v-sheet id="cardBoard" class="pa-4" rounded="xl">
-          <div @click="show = !show" class="d-flex justify-space-between">
-            <div class="d-flex">
-              <v-icon start class="my-auto" :icon="show ? 'mdi-chevron-up' : 'mdi-chevron-down'"/>
-              <p class="my-auto">Status Hari Ini</p>
-            </div>
-            <v-chip color="orange" variant="flat" class="text-white" :text="statusChip.text" /> 
-          </div>  
-
-          <v-expand-transition>
-            <div v-show="show">
-              <v-divider class="mt-4" />              
-
-              <v-sheet-text class="text-center">
-                <v-row no-gutters>
-                  <v-col cols="6" class="d-flex align-center">
-                    <p class="text-left">Rekaman kehadiran Anda untuk {{ todayLabel }}</p>
-                  </v-col>
-                  <v-col cols="6" class="d-flex justify-end">
-                    <v-progress-circular :model-value="attendanceProgress" :size="100" :width="10"
-                      :color="attendanceToday?.checkout_time ? 'success' : attendanceToday?.checkin_time ? 'primary' : 'grey-lighten-1'" rounded>
-                      <span class="text-h6 font-weight-bold">{{ attendanceProgress }}%</span>
-                    </v-progress-circular>
-                  </v-col>
-                </v-row>
-
-                <v-divider class="my-4" />
-
-                <div class="d-flex flex-column">
-                  <div class="d-flex justify-space-between">
-                    <div class="d-flex">
-                      <v-icon start icon="mdi-login" :color="attendanceToday?.checkin_time ? 'success' : 'grey'" />
-                      <div class="text-start">
-                        <p>Check-in</p>
-                        <p class="text-caption text-medium-emphasis">{{ attendanceToday?.checkin_time ? "Tercatat" : "Belum check-in" }}</p>
-                      </div>
-                    </div>
-                    <span class="font-weight-bold">{{ attendanceToday?.checkin_time || "—" }}</span>
-                  </div>
-                  
-                  <v-divider class="my-4" />
-
-                  <div class="d-flex justify-space-between">
-                    <div class="d-flex">
-                      <v-icon start icon="mdi-logout" :color="attendanceToday?.checkout_time ? 'primary' : 'grey'" />
-                      <div class="text-start">
-                        <p>Check-out</p>
-                        <p class="text-caption text-medium-emphasis">{{ attendanceToday?.checkout_time ? "Tercatat" : "Belum check-out" }}</p>
-                      </div>
-                    </div>
-                    <span class="font-weight-bold">{{ attendanceToday?.checkout_time || "—" }}</span>
-                  </div>
-                </div>
-              </v-sheet-text>
-            </div>
-          </v-expand-transition>
         </v-sheet>
       </v-col>
     </v-row>

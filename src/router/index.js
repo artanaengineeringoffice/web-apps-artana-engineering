@@ -16,6 +16,7 @@ const routes = [
   { path: "/:pathMatch(.*)*", redirect: "/login" },
 
   { path: "/login", component: Login },
+  
   { path: "/auth/callback", name: "auth-callback", component: AuthCallback },
 
   {

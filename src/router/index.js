@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { supabase } from "../lib/supabase";
 
 import Login from "../views/Login.vue";
+import Chat from "../views/Chat.vue";
 import AdminDashboard from "../views/AdminDashboard.vue";
 import Absensi from "../views/Admin/Absensi.vue";
 import Order from "../views/Admin/Order.vue";
@@ -18,6 +19,11 @@ const routes = [
   { path: "/login", component: Login },
   
   { path: "/auth/callback", name: "auth-callback", component: AuthCallback },
+
+  {
+    path: "/chat",
+    component: Chat,
+  },
 
   {
     path: "/admin",

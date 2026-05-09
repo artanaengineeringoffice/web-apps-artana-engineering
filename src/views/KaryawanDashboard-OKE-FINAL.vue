@@ -238,320 +238,243 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
+import { supabase } from "../lib/supabase";
+import BottomNavigation from "../components/BottomNavigation.vue"
 
-import { useAuth } from "@/lib/useAuth";
-import { useAttendance } from "@/lib/useAttendance";
-import { useLocation } from "@/lib/useLocation";
-import { useRiskPrediction } from "@/lib/useRiskPrediction";
-import { todayISO, nowTime } from "@/lib/useUtils";
+const show = ref(false)
 
-// Optional component
-import BottomNavigation from "@/components/BottomNavigation.vue";
+// === KONFIGURASI LOKASI KANTOR ===
+const OFFICE_LAT = -6.5135;   // Ganti dengan latitude kantor anda
+const OFFICE_LNG = 107.4566;  // Ganti dengan longitude kantor anda
+const RADIUS_METERS = 200;      // radius dalam meter
+
+
+// Helper: Haversine formula (menghitung jarak dalam meter)
+const getDistance = (lat1, lon1, lat2, lon2) => {
+  const toRad = (deg) => deg * (Math.PI / 180);
+  const R = 6371e3; // meter
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const Δφ = toRad(lat2 - lat1);
+  const Δλ = toRad(lon2 - lon1);
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 const router = useRouter();
 
-/* =========================================================
-   AUTH
-========================================================= */
-const { profile, loadProfile, logout: authLogout } = useAuth();
-
-/* =========================================================
-   ATTENDANCE
-========================================================= */
-const {
-  attendanceToday,
-  history,
-  loading: historyLoading,
-  loadToday,
-  loadHistory,
-  checkin,
-  checkout,
-} = useAttendance(profile);
-
-/* =========================================================
-   LOCATION
-========================================================= */
-const {
-  locationLoading,
-  locationError,
-  currentLocation,
-  isWithinRadius,
-  checkLocation,
-  RADIUS_METERS,
-} = useLocation();
-
-/* =========================================================
-   RISK PREDICTION
-========================================================= */
-const riskPrediction = useRiskPrediction(history);
-
-/* =========================================================
-   STATE
-========================================================= */
+// --- State umum ---
+const profile = ref(null);
 const loadingProfile = ref(true);
+const attendanceToday = ref(null);
+const history = ref([]);
 const actionLoading = ref(false);
+const historyLoading = ref(false);
 const syncing = ref(false);
 const errorMsg = ref("");
+const snackbar = ref({ show: false, text: "" });
 
-const snackbar = ref({
-  show: false,
-  text: "",
-});
+// --- State lokasi (baru) ---
+const locationLoading = ref(false);
+const locationError = ref(null);
+const currentLocation = ref(null);
+const isWithinRadius = ref(null); // null = belum tahu, true/false
 
-const show = ref(false);
-
-/* =========================================================
-   HELPERS
-========================================================= */
-const toast = (text) => {
-  snackbar.value.text = text;
-  snackbar.value.show = true;
+// --- Helper lama ---
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+const nowTime = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+};
+const formatDate = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("id-ID", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
 };
 
-/* =========================================================
-   DATE & TIME
-========================================================= */
-const todayDate = computed(() =>
-  new Date().toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })
-);
-
-const todayLabel = computed(() =>
-  new Date().toLocaleDateString("id-ID", {
-    weekday: "long",
-  })
-);
-
+// --- Computed tanggal & jam (sama) ---
+const todayDate = computed(() => new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }));
+const todayLabel = computed(() => new Date().toLocaleDateString("id-ID", { weekday: "long" }));
 const greeting = computed(() => {
-  const hour = new Date().getHours();
-
-  if (hour < 11) return "Selamat pagi";
-  if (hour < 15) return "Selamat siang";
-  if (hour < 18) return "Selamat sore";
+  const h = new Date().getHours();
+  if (h < 11) return "Selamat pagi";
+  if (h < 15) return "Selamat siang";
+  if (h < 18) return "Selamat sore";
   return "Selamat malam";
 });
-
-/* =========================================================
-   LIVE CLOCK
-========================================================= */
 const liveClock = ref("—");
 let clockTimer = null;
-
 const startClock = () => {
-  const tick = () => {
-    liveClock.value = new Date().toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  };
-
+  const tick = () => { liveClock.value = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); };
   tick();
   clockTimer = setInterval(tick, 1000);
 };
+onBeforeUnmount(() => clearInterval(clockTimer));
 
-onBeforeUnmount(() => {
-  if (clockTimer) clearInterval(clockTimer);
-});
-
-/* =========================================================
-   ATTENDANCE STATUS
-========================================================= */
+// --- Status absensi (sama) ---
 const canCheckin = computed(() => !attendanceToday.value);
-
-const canCheckout = computed(
-  () =>
-    attendanceToday.value &&
-    !attendanceToday.value.checkout_time
-);
-
+const canCheckout = computed(() => attendanceToday.value && !attendanceToday.value.checkout_time);
 const attendanceProgress = computed(() => {
   if (!attendanceToday.value) return 0;
   return attendanceToday.value.checkout_time ? 100 : 50;
 });
-
 const statusChip = computed(() => {
-  if (!attendanceToday.value) {
-    return {
-      text: "Belum Check-in",
-      color: "warning",
-    };
-  }
-
-  if (attendanceToday.value.checkout_time) {
-    return {
-      text: "Selesai",
-      color: "success",
-    };
-  }
-
-  return {
-    text: "Menunggu Check-out",
-    color: "primary",
-  };
+  if (!attendanceToday.value) return { text: "Belum Check-in", color: "warning" };
+  if (attendanceToday.value.checkout_time) return { text: "Selesai", color: "success" };
+  return { text: "Menunggu Check-out", color: "primary" };
 });
 
-/* =========================================================
-   WEEKLY SUMMARY
-========================================================= */
+// --- Data mingguan (sama) ---
 const daysOfWeek = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
-
 const weeklyDays = computed(() => {
   const today = new Date();
   const result = [];
-
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-
     const iso = d.toISOString().split("T")[0];
     const dayName = daysOfWeek[d.getDay()];
     const isToday = i === 0;
-
-    const found = history.value.find(
-      (item) => item.checkin_date === iso
-    );
-
+    const found = history.value.find(h => h.checkin_date === iso);
     let icon = "mdi-circle-medium";
     let color = "grey-lighten-1";
-
     if (found) {
-      if (found.checkout_time) {
-        icon = "mdi-check-circle";
-        color = "success";
-      } else if (found.checkin_time) {
-        icon = "mdi-check-circle-outline";
-        color = "primary";
-      } else {
-        icon = "mdi-alert-circle-outline";
-        color = "warning";
-      }
+      if (found.checkout_time) { icon = "mdi-check-circle"; color = "success"; }
+      else if (found.checkin_time) { icon = "mdi-check-circle-outline"; color = "primary"; }
+      else { icon = "mdi-alert-circle-outline"; color = "warning"; }
     }
-
-    result.push({
-      label: dayName,
-      date: d.getDate(),
-      icon,
-      color,
-      isToday,
-    });
+    result.push({ label: dayName, date: d.getDate(), icon, color, isToday });
   }
-
   return result;
 });
 
-/* =========================================================
-   LOAD DATA
-========================================================= */
+// --- Risk prediction (import dari file terpisah, asumsikan sudah ada) ---
+// Ganti dengan implementasi sederhana jika file prediksi belum ada
+const useRiskPrediction = (historyRef) => {
+  return computed(() => {
+    const total = historyRef.value.length;
+    const lateCount = historyRef.value.filter(h => h.checkin_time && h.checkin_time > "08:00:00").length;
+    const score = total ? Math.round((lateCount / total) * 100) : 0;
+    let color = "success", label = "Rendah", insight = "Terus pertahankan", notification = "";
+    if (score > 50) { color = "error"; label = "Tinggi"; insight = "Perlu perbaikan"; notification = "⚠️ Risiko telat tinggi besok! Coba persiapkan dari malam."; }
+    else if (score > 20) { color = "warning"; label = "Sedang"; insight = "Waspada"; notification = "Sedikit risiko terlambat, pastikan alarm menyala."; }
+    return { score, color, label, insight, notification };
+  });
+};
+const riskPrediction = useRiskPrediction(history);
+
+// --- Fungsi lokasi (baru) ---
+const getCurrentLocation = () => {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Browser tidak mendukung geolocation."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+  });
+};
+
+const checkLocationManual = async () => {
+  locationLoading.value = true;
+  locationError.value = null;
+  try {
+    const pos = await getCurrentLocation();
+    currentLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    const distance = getDistance(OFFICE_LAT, OFFICE_LNG, currentLocation.value.lat, currentLocation.value.lng);
+    isWithinRadius.value = distance <= RADIUS_METERS;
+    if (!isWithinRadius.value) {
+      toast(`Anda berada di luar radius kantor (${Math.round(distance)} meter dari kantor). Absensi tidak dapat dilakukan.`);
+    } else {
+      toast(`Lokasi valid. Jarak ke kantor: ${Math.round(distance)} meter.`);
+    }
+  } catch (err) {
+    locationError.value = err.message || "Gagal mendapatkan lokasi.";
+    isWithinRadius.value = false;
+  } finally {
+    locationLoading.value = false;
+  }
+};
+
+// Fungsi yang dipanggil sebelum check-in/out untuk memastikan lokasi
+const ensureLocationValid = async () => {
+  // Jika belum pernah cek lokasi atau status masih null, cek manual
+  if (isWithinRadius.value === null || currentLocation.value === null) {
+    await checkLocationManual();
+  }
+  if (!isWithinRadius.value) {
+    throw new Error(`Anda berada di luar radius kantor (${RADIUS_METERS} meter). Absensi tidak diizinkan.`);
+  }
+  return true;
+};
+
+// --- Data dari Supabase (fungsi loadProfile, loadTodayAttendance, loadHistory7Days, refreshAll sama seperti kode awal) ---
+const loadProfile = async () => {
+  loadingProfile.value = true;
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
+    loadingProfile.value = false;
+    router.replace("/login");    
+    return;
+  }
+  const { data, error } = await supabase.from("profiles").select("id, full_name, email, role, avatar_url").eq("id", userData.user.id).single();
+  if (error) errorMsg.value = error.message;
+  profile.value = data;
+  loadingProfile.value = false;
+  //console.log('user', data.avatar_url)
+};
+
+const loadTodayAttendance = async () => {
+  if (!profile.value?.id) return;
+  const today = todayISO();
+  const { data, error } = await supabase.from("attendance").select("id, user_id, checkin_date, checkin_time, checkout_time").eq("user_id", profile.value.id).eq("checkin_date", today).maybeSingle();
+  if (error) errorMsg.value = error.message;
+  attendanceToday.value = data || null;
+};
+
 const loadHistory7Days = async () => {
-  const today = new Date();
-  const start = new Date(today);
-  start.setDate(today.getDate() - 6);
-
-  const startDate = start.toISOString().split("T")[0];
-  const endDate = today.toISOString().split("T")[0];
-
-  await loadHistory(startDate, endDate);
+  if (!profile.value?.id) return;
+  historyLoading.value = true;
+  const { data, error } = await supabase.from("attendance").select("id, checkin_date, checkin_time, checkout_time").eq("user_id", profile.value.id).order("checkin_date", { ascending: false }).limit(7);
+  historyLoading.value = false;
+  if (error) errorMsg.value = error.message;
+  history.value = data || [];
 };
 
 const refreshAll = async () => {
   syncing.value = true;
-  errorMsg.value = "";
-
-  try {
-    loadingProfile.value = true;
-
-    const userProfile = await loadProfile();
-
-    if (!userProfile) {
-      router.replace("/login");
-      return;
-    }
-
-    await loadToday();
-    await loadHistory7Days();
-
-    toast("Data diperbarui.");
-  } catch (err) {
-    errorMsg.value = err.message || "Terjadi kesalahan.";
-  } finally {
-    loadingProfile.value = false;
-    syncing.value = false;
-  }
+  await loadProfile();
+  await loadTodayAttendance();
+  await loadHistory7Days();
+  // Jangan otomatis cek lokasi, biar user klik tombol "Periksa Lokasi" atau action
+  syncing.value = false;
+  toast("Data diperbarui.");
 };
 
-/* =========================================================
-   LOCATION
-========================================================= */
-const checkLocationManual = async () => {
-  try {
-    const result = await checkLocation();
-
-    if (result.valid) {
-      toast(
-        `Lokasi valid. Jarak ke kantor: ${Math.round(
-          result.distance
-        )} meter.`
-      );
-    } else {
-      toast(
-        `Anda berada di luar radius kantor (${Math.round(
-          result.distance
-        )} meter dari kantor).`
-      );
-    }
-  } catch (err) {
-    errorMsg.value =
-      err.message || "Gagal mendapatkan lokasi.";
-    toast(errorMsg.value);
-  }
-};
-
-const ensureLocationValid = async () => {
-  if (
-    isWithinRadius.value === null ||
-    !currentLocation.value
-  ) {
-    await checkLocationManual();
-  }
-
-  if (!isWithinRadius.value) {
-    throw new Error(
-      `Anda berada di luar radius kantor (${RADIUS_METERS} meter). Absensi tidak diizinkan.`
-    );
-  }
-
-  return true;
-};
-
-/* =========================================================
-   ACTIONS
-========================================================= */
+// --- Aksi absensi dengan pengecekan lokasi ---
 const doCheckin = async () => {
   actionLoading.value = true;
-  errorMsg.value = "";
-
   try {
-    await ensureLocationValid();
-    await loadToday();
-
+    await ensureLocationValid(); // <- cek lokasi dulu
+    await loadTodayAttendance();
     if (attendanceToday.value) {
       toast("Anda sudah check-in.");
       return;
     }
-
-    await checkin();
+    const { error } = await supabase.from("attendance").insert([
+      { user_id: profile.value.id, checkin_date: todayISO(), checkin_time: nowTime(), checkout_time: null }
+    ]);
+    if (error) throw error;
     await refreshAll();
-
     toast("Check-in berhasil!");
   } catch (err) {
-    errorMsg.value = err.message || "Check-in gagal.";
-    toast(errorMsg.value);
+    errorMsg.value = err.message;
+    toast(err.message);
   } finally {
     actionLoading.value = false;
   }
@@ -559,45 +482,44 @@ const doCheckin = async () => {
 
 const doCheckout = async () => {
   actionLoading.value = true;
-  errorMsg.value = "";
-
   try {
-    await ensureLocationValid();
-    await loadToday();
-
+    await ensureLocationValid(); // <- cek lokasi dulu
+    await loadTodayAttendance();
     if (!attendanceToday.value) {
       toast("Belum check-in.");
       return;
     }
-
     if (attendanceToday.value.checkout_time) {
       toast("Sudah check-out.");
       return;
     }
-
-    await checkout(attendanceToday.value.id);
+    const { error } = await supabase.from("attendance").update({ checkout_time: nowTime() }).eq("id", attendanceToday.value.id);
+    if (error) throw error;
     await refreshAll();
-
     toast("Check-out berhasil!");
   } catch (err) {
-    errorMsg.value = err.message || "Check-out gagal.";
-    toast(errorMsg.value);
+    errorMsg.value = err.message;
+    toast(err.message);
   } finally {
     actionLoading.value = false;
   }
 };
 
 const logout = async () => {
-  await authLogout();
+  await supabase.auth.signOut();
   router.replace("/login");
 };
 
-/* =========================================================
-   INIT
-========================================================= */
+const toast = (t) => {
+  snackbar.value.text = t;
+  snackbar.value.show = true;
+};
+
+// --- Inisialisasi ---
 onMounted(async () => {
   startClock();
   await refreshAll();
+  // Tidak otomatis minta lokasi saat mount, biar user mengklik tombol periksa lokasi
 });
 </script>
 

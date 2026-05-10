@@ -5,7 +5,20 @@
     </v-app-bar-title>
   </v-app-bar>
 
-  <v-container class="py-4">
+  <!-- LOADING CARD -->
+   <v-container v-if="loadingCard" class="fill-height">
+    <v-row>
+      <v-col>
+        <LoadingCard      
+          title="Loading"
+          subtitle="Mohon tunggu sebentar"
+        />
+      </v-col>
+    </v-row>    
+   </v-container>  
+
+  <!-- CONTENT -->
+  <v-container v-else class="py-4">
 
     <!-- FILTER -->
     <v-sheet color="blue-darken-3" elevation="5" class="pa-4 rounded-xl mb-4">
@@ -23,7 +36,8 @@
             :close-on-content-click="false"
           >
             <template #activator="{ props }">
-              <v-text-field density="compact"
+              <v-text-field
+                density="compact"
                 v-bind="props"
                 :model-value="formattedStartDate"
                 label="Dari Tgl"
@@ -33,7 +47,7 @@
                 variant="solo"
                 flat
                 hide-details
-                bg-color="grey-lighten-5"
+                bg-color="blue-lighten-4"
                 class="modern-date-field"
               />
             </template>
@@ -53,7 +67,8 @@
             :close-on-content-click="false"
           >
             <template #activator="{ props }">
-              <v-text-field density="compact"
+              <v-text-field
+                density="compact"
                 v-bind="props"
                 :model-value="formattedEndDate"
                 label="Sampai Tgl"
@@ -63,7 +78,7 @@
                 variant="solo"
                 flat
                 hide-details
-                bg-color="grey-lighten-5"
+                bg-color="blue-lighten-4"
                 class="modern-date-field"
               />
             </template>
@@ -96,7 +111,8 @@
 
           <v-spacer />
 
-          <v-btn variant="tonal"
+          <v-btn
+            variant="tonal"
             color="white"
             prepend-icon="mdi-microsoft-excel"
             rounded="xl"
@@ -134,7 +150,6 @@
 
         <v-data-table
           :items="filteredHistory"
-          :loading="loading"
           class="custom-table"
         >
 
@@ -187,9 +202,6 @@
   </v-container>
 </template>
 
-
-
-
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import * as XLSX from "xlsx";
@@ -198,8 +210,16 @@ import { useAuth } from "@/lib/useAuth";
 import { useAttendance } from "@/lib/useAttendance";
 import { formatDate } from "@/lib/useUtils";
 
+import LoadingCard from "@/components/LoadingCard.vue";
+
+const loadingCard = ref(true);
+
 const { profile, loadProfile } = useAuth();
-const { history, loading, loadHistory } = useAttendance(profile);
+
+const {
+  history,
+  loadHistory
+} = useAttendance(profile);
 
 // menu
 const menuStart = ref(false);
@@ -231,19 +251,41 @@ const formattedEndDate = computed(() =>
 
 // init
 onMounted(async () => {
-  await loadProfile();
-  await loadHistory();
+  loadingCard.value = true;
+
+  try {
+    await loadProfile();
+    await loadHistory();
+  } finally {
+    loadingCard.value = false;
+  }
 });
 
 // filter
-const applyFilter = () => {
-  loadHistory(startDate.value, endDate.value);
+const applyFilter = async () => {
+  loadingCard.value = true;
+
+  try {
+    await loadHistory(
+      startDate.value,
+      endDate.value
+    );
+  } finally {
+    loadingCard.value = false;
+  }
 };
 
-const resetFilter = () => {
+const resetFilter = async () => {
   startDate.value = null;
   endDate.value = null;
-  loadHistory();
+
+  loadingCard.value = true;
+
+  try {
+    await loadHistory();
+  } finally {
+    loadingCard.value = false;
+  }
 };
 
 // search
@@ -254,19 +296,6 @@ const filteredHistory = computed(() => {
       .includes(search.value.toLowerCase())
   );
 });
-
-// summary
-const total = computed(() => history.value.length);
-
-const complete = computed(() =>
-  history.value.filter((h) => h.checkout_time).length
-);
-
-const progress = computed(() =>
-  total.value
-    ? Math.round((complete.value / total.value) * 100)
-    : 0
-);
 
 // export
 const exportExcel = () => {
@@ -286,9 +315,15 @@ const exportExcel = () => {
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
 
-  XLSX.utils.book_append_sheet(wb, ws, "Absensi");
+  XLSX.utils.book_append_sheet(
+    wb,
+    ws,
+    "Absensi"
+  );
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date()
+    .toISOString()
+    .split("T")[0];
 
   XLSX.writeFile(
     wb,
@@ -296,11 +331,6 @@ const exportExcel = () => {
   );
 };
 </script>
-
-
-
-
-
 
 <style scoped>
 .table-wrapper :deep(.v-table__wrapper) {

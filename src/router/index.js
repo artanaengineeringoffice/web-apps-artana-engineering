@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 
 import Login from "../views/Login.vue";
 import Chat from "../views/Chat.vue";
+
 import AdminDashboard from "../views/AdminDashboard.vue";
 import Absensi from "../views/Admin/Absensi.vue";
 import Order from "../views/Admin/Order.vue";
@@ -11,6 +12,7 @@ import KaryawanDashboard from "../views/KaryawanDashboard.vue";
 import AuthCallback from "../views/AuthCallback.vue";
 
 import HistoryAbsen from "../views/Karyawan/HistoryAbsen.vue"
+import InfoAdmin from "../views/Karyawan/InfoAdmin.vue"
 
 const routes = [
   { path: "/", redirect: "/login" },
@@ -52,6 +54,11 @@ const routes = [
   {
     path: "/karyawan/historyabsen",
     component: HistoryAbsen,
+    meta: { requiresAuth: true, role: "karyawan" },
+  },
+  {
+    path: "/karyawan/InfoAdmin",
+    component: InfoAdmin,
     meta: { requiresAuth: true, role: "karyawan" },
   },
 ];

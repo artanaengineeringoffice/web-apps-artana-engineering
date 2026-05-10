@@ -14,7 +14,14 @@
   </template>
 
   <template v-slot:append>
-    <v-btn icon="mdi-dots-verticalxxx" />
+    <v-btn
+      @click="handleInfoClick"
+      to="/karyawan/InfoAdmin"
+      :class="{ 'bell-animation': !bellRead }"
+      icon="mdi-bell-ring"
+      :color="bellRead ? 'grey' : 'red-accent-4'"
+    />
+    <v-btn icon="mdi-dots-vertical" />
   </template>
 </v-app-bar>
 
@@ -22,8 +29,19 @@
   <v-snackbar v-model="snackbar.show" timeout="2500" location="top right" color="black" variant="flat">
         <span class="text-body-2">{{ snackbar.text }}</span>
   </v-snackbar> 
+
+  <!-- LOADING -->
+  <v-container
+    v-if="loadingCard"
+    class="fill-height d-flex align-center justify-center"
+  >
+    <LoadingCard
+      title="Loading"
+      subtitle="Mohon tunggu sebentar"
+    />
+  </v-container>
   
-  <v-container>
+  <v-container v-else>
     <!--HEADER-->
     <v-row>
       <v-col cols="12">
@@ -56,6 +74,48 @@
             <v-chip size="small" color="orange" variant="flat" class="text-white" :text="statusChip.text" /> 
           </div>
         </v-sheet>
+      </v-col>
+    </v-row>
+
+    <!-- PENGUMUMAN PERUSAHAAN -->
+    <v-row v-if="announcements.length > 0">
+      <v-col cols="12" v-if="!bellRead">
+        <v-card
+          to="/karyawan/InfoAdmin"
+          class="pa-4 google-glow-btn"
+          :color="bellRead ? 'grey' : 'red-accent-4'"
+          rounded="xl"
+          elevation="6"
+          @click="handleInfoClick"
+        >
+          <div class="d-flex justify-space-between">
+            <div class="d-flex align-center">
+
+              <!-- bell -->
+              <v-avatar
+                size="small"
+                :class="{ 'bell-animation': !bellRead }"
+              >
+                <v-icon :color="bellRead ? 'grey' : 'red-accent-4'">
+                  mdi-bell-ring
+                </v-icon>
+              </v-avatar>
+
+              <p class="my-auto ml-4 font-weight-bold text-white">
+                Info Admin
+              </p>
+            </div>
+
+            <v-chip
+              size="x-small"
+              color="white"
+              variant="flat"
+              class="my-auto font-weight-bold"
+            >
+              {{ announcements.length }}
+            </v-chip>
+          </div>
+        </v-card>
       </v-col>
     </v-row>
 
@@ -238,17 +298,23 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch  } from "vue";
 import { useRouter } from "vue-router";
 
 import { useAuth } from "@/lib/useAuth";
 import { useAttendance } from "@/lib/useAttendance";
 import { useLocation } from "@/lib/useLocation";
 import { useRiskPrediction } from "@/lib/useRiskPrediction";
-import { todayISO, nowTime } from "@/lib/useUtils";
+import { useAnnouncement } from "@/lib/useAnnouncement";
 
-// Optional component
-import BottomNavigation from "@/components/BottomNavigation.vue";
+import LoadingCard from "@/components/LoadingCard.vue";
+
+const loadingCard = ref(true);
+
+const bellRead = ref(false);
+const lastAnnouncementCount = ref(0);
+
+const showEmergency = ref(false)
 
 const router = useRouter();
 
@@ -265,10 +331,24 @@ const {
   history,
   loading: historyLoading,
   loadToday,
+  yyy,
   loadHistory,
   checkin,
-  checkout,
+  checkout
 } = useAttendance(profile);
+
+const {
+  announcements,
+  loadAnnouncements
+} = useAnnouncement(profile);
+
+const emergencyAnnouncement = computed(() =>
+  announcements.value.find(
+    item =>
+      item.type === "emergency" &&
+      item.is_active !== false
+  )
+);
 
 /* =========================================================
    LOCATION
@@ -587,18 +667,70 @@ const doCheckout = async () => {
   }
 };
 
+// saat card diklik
+const handleInfoClick = () => {
+  bellRead.value = true;
+
+  // simpan jumlah announcement yang sudah dibaca
+  localStorage.setItem(
+    "announcementCount",
+    announcements.value.length
+  );
+};
+
+onMounted(async () => {
+  loadingCard.value = true;
+
+  try {
+    startClock();
+
+    await refreshAll();
+    await loadAnnouncements();
+
+    // ambil jumlah announcement terakhir yang sudah dibaca
+    const savedCount = Number(
+      localStorage.getItem("announcementCount") || 0
+    );
+
+    lastAnnouncementCount.value = savedCount;
+
+    // kalau ada announcement baru -> aktifkan animasi
+    if (announcements.value.length > savedCount) {
+      bellRead.value = false;
+    } else {
+      bellRead.value = true;
+    }
+    
+
+    if (emergencyAnnouncement.value) {
+      showEmergency.value = true;
+    }
+  }  finally {
+      loadingCard.value = false;
+    }
+});
+
+// monitor perubahan announcement
+watch(
+  () => announcements.value.length,
+  (newCount) => {
+
+    const savedCount = Number(
+      localStorage.getItem("announcementCount") || 0
+    );
+
+    // kalau jumlah announcement bertambah
+    if (newCount > savedCount) {
+      bellRead.value = false;
+    }
+  }
+);
+
+
 const logout = async () => {
   await authLogout();
   router.replace("/login");
 };
-
-/* =========================================================
-   INIT
-========================================================= */
-onMounted(async () => {
-  startClock();
-  await refreshAll();
-});
 </script>
 
 <style scoped>
@@ -642,5 +774,23 @@ onMounted(async () => {
   .banner-card {
     padding: 16px !important;
   }
+}
+
+.bell-animation {
+  animation: bellShake 1.5s infinite;
+  transform-origin: top center;
+}
+
+@keyframes bellShake {
+  0% { transform: rotate(0); }
+  10% { transform: rotate(15deg); }
+  20% { transform: rotate(-12deg); }
+  30% { transform: rotate(10deg); }
+  40% { transform: rotate(-8deg); }
+  50% { transform: rotate(6deg); }
+  60% { transform: rotate(-4deg); }
+  70% { transform: rotate(2deg); }
+  80% { transform: rotate(-1deg); }
+  100% { transform: rotate(0); }
 }
 </style>

@@ -1,13 +1,13 @@
 <template>   
     
-  <v-navigation-drawer
+  <v-navigation-drawer 
     v-model="drawer"
     theme="dark"
     :permanent="!mobile"
   >
-    <v-list>
-      <v-list-item to="/admin" prepend-icon="mdi-view-dashboard" title="Dashboard" />
-      <v-list-item to="/absensi" prepend-icon="mdi-book" title="Absensi" />
+    <v-list>      
+      <v-list-item to="/admin" prepend-icon="mdi-book" title="Dashboard" />
+      <v-list-item to="/absensi" prepend-icon="mdi-view-dashboard" title="Absensi" />
       <v-list-item prepend-icon="mdi-account-box" title="Account" />
       <v-list-item prepend-icon="mdi-gavel" title="Admin" />
       <v-list-item to="/order" prepend-icon="mdi-receipt-text" title="Order" />
@@ -27,7 +27,7 @@
 import { ref, watch } from "vue"
 import { useDisplay } from "vuetify"
 
-const drawer = ref(true)
+const drawer = ref()
 
 const { mobile } = useDisplay()
 

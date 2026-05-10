@@ -6,7 +6,7 @@
   >
     <v-btn to="/karyawan">
       <v-icon>mdi-account-clock-outline</v-icon>
-      Absen
+      Dashboard
     </v-btn>
 
     <v-btn to="/karyawan/historyabsen">

@@ -9,6 +9,11 @@
       Dashboard
     </v-btn>
 
+    <v-btn to="/chat">
+      <v-icon>mdi-chat-processing-outline</v-icon>
+      Chat
+    </v-btn>
+
     <v-btn to="/karyawan/historyabsen">
       <v-icon>mdi-clipboard-text-clock-outline</v-icon>
       history

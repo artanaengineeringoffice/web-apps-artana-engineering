@@ -1,297 +1,393 @@
-<template>
-  <v-app>
-    <!-- HEADER -->
-    <v-app-bar
-      flat
-      height="70"
-      class="border-b"
-      color="white"
-    >
-      <template #prepend>
-        <v-avatar
-          color="primary"
-          size="42"
-        >
-          <v-icon>mdi-robot-happy-outline</v-icon>
-        </v-avatar>
-      </template>
-
-      <v-app-bar-title>
-        <div class="d-flex flex-column">
-          <span class="text-subtitle-1 font-weight-bold">
-            Bolo AI Assistant
-          </span>
-
-          <span class="text-caption text-grey">
-            Artana Engineering
-          </span>
-        </div>
-      </v-app-bar-title>
-    </v-app-bar>
-
-    <!-- CONTENT -->
-    <v-main class="bg-grey-lighten-4">
-      <v-container
-        fluid
-        class="pa-4"
-      >
-        <v-row justify="center">
-          <v-col
-            cols="12"
-            md="8"
-            lg="7"
-          >
-            <v-card
-              rounded="xl"
-              elevation="2"
-              class="chat-card"
-            >
-              <!-- CHAT AREA -->
-              <div
-                ref="chatContainer"
-                class="chat-container pa-4"
-              >
-                <div
-                  v-for="(msg, i) in messages"
-                  :key="i"
-                  class="mb-4"
-                >
-                  <!-- USER -->
-                  <div
-                    v-if="msg.role === 'user'"
-                    class="d-flex justify-end"
-                  >
-                    <div class="user-bubble">
-                      {{ msg.text }}
-                    </div>
-                  </div>
-
-                  <!-- ASSISTANT -->
-                  <div
-                    v-else
-                    class="d-flex justify-start"
-                  >
-                    <div class="assistant-wrapper">
-                      <v-avatar
-                        size="34"
-                        color="primary"
-                        class="mr-2"
-                      >
-                        <v-icon size="18">
-                          mdi-robot-outline
-                        </v-icon>
-                      </v-avatar>
-
-                      <div class="assistant-bubble">
-                        {{ msg.text }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- LOADING -->
-                <div
-                  v-if="loading"
-                  class="d-flex align-center"
-                >
-                  <v-progress-circular
-                    indeterminate
-                    size="20"
-                    width="2"
-                    color="primary"
-                    class="mr-2"
-                  />
-
-                  <span class="text-caption text-grey">
-                    Bolo sedang mengetik...
-                  </span>
-                </div>
-              </div>
-
-              <!-- INPUT -->
-              <v-divider />
-
-              <div class="pa-3">
-                <div class="d-flex ga-2">
-                  <v-text-field
-                    v-model="prompt"
-                    placeholder="Tanyakan tentang absensi, SOP, perusahaan..."
-                    variant="outlined"
-                    hide-details
-                    density="comfortable"
-                    rounded="xl"
-                    bg-color="white"
-                    @keyup.enter="sendMessage"
-                  />
-
-                  <v-btn
-                    color="primary"
-                    rounded="xl"
-                    size="large"
-                    :loading="loading"
-                    @click="sendMessage"
-                  >
-                    <v-icon>mdi-send</v-icon>
-                  </v-btn>
-                </div>
-              </div>
-            </v-card>
-          </v-col>
-        </v-row>
-      </v-container>
-    </v-main>
-  </v-app>
-</template>
-
 <script setup>
 import { ref, nextTick } from "vue";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
 
-const prompt = ref("");
+const message = ref("");
+const messages = ref([]);
 const loading = ref(false);
 const chatContainer = ref(null);
 
-const messages = ref([
-  {
-    role: "assistant",
-    text: "Halo 👋 Ada yang bisa saya bantu terkait absensi atau perusahaan?"
-  }
-]);
-
-// AUTO SCROLL
 const scrollToBottom = async () => {
-
   await nextTick();
 
   if (chatContainer.value) {
     chatContainer.value.scrollTop =
       chatContainer.value.scrollHeight;
   }
-
 };
 
-// SEND MESSAGE
 const sendMessage = async () => {
 
-  if (!prompt.value.trim()) return;
+  if (!message.value.trim()) return;
 
-  const userMessage = prompt.value;
+  const userMessage = message.value;
 
-  // PUSH USER MESSAGE
   messages.value.push({
     role: "user",
-    text: userMessage
+    text: userMessage,
   });
 
-  // RESET INPUT
-  prompt.value = "";
+  message.value = "";
 
-  // SCROLL
-  scrollToBottom();
+  await scrollToBottom();
 
   loading.value = true;
 
   try {
 
-    // AMBIL KNOWLEDGE BASE
-    const { data, error } = await supabase
-      .from("knowledge_base")
-      .select("*");
+    const { data, error } = await supabase.functions.invoke(
+      "quick-processor",
+      {
+        body: {
+          message: userMessage,
+        },
+      }
+    );
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
-    // CARI DATA RELEVAN
-    const found = data.find(item => {
-
-      const title =
-        item.title?.toLowerCase() || "";
-
-      const content =
-        item.content?.toLowerCase() || "";
-
-      const question =
-        userMessage.toLowerCase();
-
-      return (
-        question.includes(title) ||
-        content.includes(question)
-      );
-
-    });
-
-    // RESPONSE BOT
     messages.value.push({
-      role: "assistant",
-      text: found
-        ? found.content
-        : "Maaf, saya belum menemukan jawaban yang sesuai."
+      role: "ai",
+      text:
+        data?.answer ||
+        "Maaf, AI tidak memberikan jawaban.",
     });
 
   } catch (err) {
 
-    console.error(err);
+    console.log(err);
 
     messages.value.push({
-      role: "assistant",
-      text: "Terjadi kesalahan saat mengambil data."
+      role: "ai",
+      text: "Maaf, terjadi kesalahan.",
     });
 
+  } finally {
+
+    loading.value = false;
+
+    await scrollToBottom();
+
   }
-
-  loading.value = false;
-
-  scrollToBottom();
 
 };
 </script>
 
+<template>
+
+  <v-container
+    fluid
+    class="chat-wrapper pa-0"
+  >
+
+    <v-row
+      justify="center"
+      class="ma-0 fill-height"
+    >
+
+      <v-col
+        cols="12"
+        md="8"
+        lg="6"
+        class="d-flex align-center justify-center"
+      >
+
+        <v-card
+          class="chat-card"
+          rounded="xl"
+          elevation="0"
+        >
+
+          <!-- HEADER -->
+          <div class="chat-header">
+
+            <div class="d-flex align-center">
+
+              <v-avatar
+                size="42"
+                color="white"
+              >
+                <v-icon color="primary">
+                  mdi-robot-happy-outline
+                </v-icon>
+              </v-avatar>
+
+              <div class="ml-3">
+                <h2 class="text-h6 font-weight-bold text-white">
+                  AI Assistant
+                </h2>
+
+                <p class="text-caption text-white opacity-80">
+                  Online
+                </p>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- CHAT BODY -->
+          <div
+            ref="chatContainer"
+            class="chat-body"
+          >
+
+            <div
+              v-if="messages.length === 0"
+              class="empty-state"
+            >
+
+              <v-icon
+                size="80"
+                color="primary"
+              >
+                mdi-robot-outline
+              </v-icon>
+
+              <h2 class="mt-4 text-h5 font-weight-bold">
+                Selamat Datang 👋
+              </h2>
+
+              <p class="text-medium-emphasis mt-2">
+                Tanyakan sesuatu kepada AI Assistant
+              </p>
+
+            </div>
+
+            <div
+              v-for="(item, index) in messages"
+              :key="index"
+              class="mb-4"
+            >
+
+              <!-- USER -->
+              <div
+                v-if="item.role === 'user'"
+                class="d-flex justify-end"
+              >
+
+                <div class="user-message">
+
+                  {{ item.text }}
+
+                </div>
+
+              </div>
+
+              <!-- AI -->
+              <div
+                v-else
+                class="d-flex justify-start"
+              >
+
+                <div class="ai-message">
+
+                  <div class="d-flex align-center mb-2">
+
+                    <v-avatar
+                      size="28"
+                      color="primary"
+                    >
+                      <v-icon
+                        size="16"
+                        color="white"
+                      >
+                        mdi-robot-outline
+                      </v-icon>
+                    </v-avatar>
+
+                    <span class="ml-2 text-caption font-weight-bold">
+                      AI Assistant
+                    </span>
+
+                  </div>
+
+                  <div class="message-text">
+                    {{ item.text }}
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- LOADING -->
+            <div
+              v-if="loading"
+              class="d-flex justify-start"
+            >
+
+              <div class="ai-message">
+
+                <div class="d-flex align-center">
+
+                  <v-progress-circular
+                    indeterminate
+                    size="18"
+                    width="2"
+                    color="primary"
+                  />
+
+                  <span class="ml-3">
+                    AI sedang mengetik...
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- INPUT -->
+          <div class="chat-input">
+
+            <v-text-field
+              v-model="message"
+              variant="solo"
+              flat
+              hide-details
+              rounded="xl"
+              bg-color="#F3F4F6"
+              placeholder="Tulis pesan..."
+              @keyup.enter="sendMessage"
+            >
+
+              <template #prepend-inner>
+                <v-icon color="grey">
+                  mdi-message-outline
+                </v-icon>
+              </template>
+
+            </v-text-field>
+
+            <v-btn
+              icon
+              size="50"
+              color="primary"
+              elevation="0"
+              @click="sendMessage"
+              :loading="loading"
+            >
+              <v-icon>
+                mdi-send
+              </v-icon>
+            </v-btn>
+
+          </div>
+
+        </v-card>
+
+      </v-col>
+
+    </v-row>
+
+  </v-container>
+
+</template>
+
 <style scoped>
+
+.chat-wrapper {
+  min-height: 100vh;
+  background:
+    linear-gradient(
+      135deg,
+      #EEF2FF 0%,
+      #FFFFFF 50%,
+      #F5F3FF 100%
+    );
+}
+
 .chat-card {
-  height: 80vh;
+  width: 100%;
+  height: 92vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #E5E7EB;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(20px);
 }
 
-.chat-container {
+.chat-header {
+  padding: 20px;
+  background:
+    linear-gradient(
+      135deg,
+      #6366F1,
+      #8B5CF6
+    );
+}
+
+.chat-body {
   flex: 1;
   overflow-y: auto;
-  background: #f9fafb;
+  padding: 24px;
 }
 
-.user-bubble {
-  background: linear-gradient(
-    135deg,
-    #1976d2,
-    #42a5f5
-  );
+.chat-input {
+  padding: 16px;
+  border-top: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+}
 
-  color: white;
-  padding: 12px 16px;
-  border-radius: 18px 18px 4px 18px;
+.user-message {
   max-width: 75%;
+  padding: 14px 18px;
+  border-radius: 20px 20px 4px 20px;
+  background:
+    linear-gradient(
+      135deg,
+      #6366F1,
+      #8B5CF6
+    );
+  color: white;
   font-size: 14px;
   line-height: 1.6;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow:
+    0 4px 12px rgba(99,102,241,0.2);
 }
 
-.assistant-wrapper {
-  display: flex;
-  align-items: flex-start;
+.ai-message {
   max-width: 80%;
-}
-
-.assistant-bubble {
+  padding: 16px;
+  border-radius: 20px 20px 20px 4px;
   background: white;
-  color: #111827;
-  padding: 12px 16px;
-  border-radius: 18px 18px 18px 4px;
-  font-size: 14px;
-  line-height: 1.7;
   border: 1px solid #E5E7EB;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.04);
 }
 
-.border-b {
-  border-bottom: 1px solid #E5E7EB;
+.message-text {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  font-size: 14px;
+  color: #111827;
 }
+
+.empty-state {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-body::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 20px;
+}
+
 </style>

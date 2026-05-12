@@ -6,13 +6,16 @@
       flat
       style="border-bottom: 1px solid #E5E7EB;"
     >
+    <template v-slot:prepend>
+      <v-btn @click="router.back()" icon="mdi-keyboard-backspace" />
+    </template>
       <v-app-bar-title class="text-center">
         <p class="text-h6">Tanya Admin</p>
       </v-app-bar-title>
+      <template v-slot:append>
+        <v-btn icon="" />
+      </template>
     </v-app-bar>
-
-    <!-- BOTTOM NAVIGATION -->
-    <BottomNavigation />
 
     <!-- INPUT BAR -->
     <v-app-bar
@@ -58,34 +61,29 @@
 
     <!-- MAIN CONTENT -->
     <v-main class="bgApp">
-      <!-- LOADING PAGE -->
-      <v-container
+
+      <!-- LOADING -->
+      <div
         v-if="loadingCard"
-        class="fill-height"
+        class="loading-wrapper"
       >
-        <v-row class="fill-height">
-          <v-col
-            cols="12"
-            class="d-flex align-center justify-center"
-          >
-            <LoadingCard
-              title="Loading"
-              subtitle="Mohon tunggu sebentar"
-            />
-          </v-col>
-        </v-row>
-      </v-container>
+        <LoadingCard
+          title="Loading"
+          subtitle="Mohon tunggu sebentar"
+        />
+      </div>
 
       <!-- CHAT CONTENT -->
       <v-container
         v-else
         fluid
-        class="fill-height pa-0"
+        class="pa-0 h-100"
       >
+
         <!-- EMPTY STATE -->
         <v-row
           v-if="messages.length === 0"
-          class="fill-height ma-0"
+          class="h-100 ma-0"
         >
           <v-col
             cols="12"
@@ -113,31 +111,29 @@
         <!-- CHAT LIST -->
         <v-row
           v-else
-          class="fill-height ma-0"
+          class="h-100 ma-0"
         >
           <v-col cols="12" class="pa-0">
             <div
               ref="chatContainer"
               class="chat-body pa-4"
             >
+
               <div
                 v-for="(item, index) in messages"
                 :key="index"
                 class="mb-4"
               >
-                <!-- USER MESSAGE -->
+
+                <!-- USER -->
                 <v-sheet
                   v-if="item.role === 'user'"
                   color="transparent"
                   class="d-flex justify-end"
                 >
                   <div>
-                    <div
-                      class="d-flex justify-end align-center mb-2"
-                    >
-                      <p
-                        class="ml-2 my-auto text-caption font-weight-bold"
-                      >
+                    <div class="d-flex justify-end align-center mb-2">
+                      <p class="ml-2 my-auto text-caption font-weight-bold">
                         User
                       </p>
                     </div>
@@ -154,21 +150,14 @@
                   </div>
                 </v-sheet>
 
-                <!-- AI MESSAGE -->
+                <!-- AI -->
                 <div v-else>
-                  <div
-                    class="d-flex align-center mb-2"
-                  >
-                    <v-icon
-                      class="my-auto"
-                      size="small"
-                    >
+                  <div class="d-flex align-center mb-2">
+                    <v-icon class="my-auto" size="small">
                       mdi-robot-outline
                     </v-icon>
 
-                    <p
-                      class="ml-2 my-auto text-caption font-weight-bold"
-                    >
+                    <p class="ml-2 my-auto text-caption font-weight-bold">
                       AI Assistant
                     </p>
                   </div>
@@ -182,7 +171,7 @@
                 </div>
               </div>
 
-              <!-- LOADING MESSAGE -->
+              <!-- TYPING -->
               <div
                 v-if="loading"
                 class="d-flex justify-start"
@@ -205,49 +194,84 @@
                   </div>
                 </v-sheet>
               </div>
+
             </div>
           </v-col>
         </v-row>
+
       </v-container>
     </v-main>
   </v-layout>
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted } from "vue";
+import {
+  ref,
+  nextTick,
+  onMounted,
+} from "vue";
+
+import { useRouter } from "vue-router";
+
 import { supabase } from "../lib/supabase";
-import BottomNavigation from "../components/BottomNavigation.vue";
+
 import LoadingCard from "@/components/LoadingCard.vue";
 
+// ======================
+// ROUTER
+// ======================
+const router = useRouter();
+
+// ======================
+// STATE
+// ======================
 const loadingCard = ref(true);
+
 const message = ref("");
+
 const messages = ref([]);
+
 const loading = ref(false);
+
 const chatContainer = ref(null);
 
-// Scroll ke bawah
+const user = ref(null);
+
+// ======================
+// SCROLL BOTTOM
+// ======================
 const scrollToBottom = async () => {
+
   await nextTick();
 
   if (chatContainer.value) {
+
     chatContainer.value.scrollTop =
       chatContainer.value.scrollHeight;
+
   }
+
 };
 
-// Kirim pesan
+// ======================
+// SEND MESSAGE
+// ======================
 const sendMessage = async () => {
-  if (!message.value.trim() || loading.value) return;
 
-  const userMessage = message.value.trim();
+  if (!message.value.trim()) return;
 
-  // Tambahkan pesan user
+  if (loading.value) return;
+
+  const userMessage =
+    message.value.trim();
+
+  // tambah chat user
   messages.value.push({
     role: "user",
     text: userMessage,
   });
 
-  // Kosongkan input
+  // reset input
   message.value = "";
 
   await scrollToBottom();
@@ -255,54 +279,94 @@ const sendMessage = async () => {
   loading.value = true;
 
   try {
+
+    // invoke edge function
     const { data, error } =
       await supabase.functions.invoke(
         "quick-processor",
         {
           body: {
             message: userMessage,
+            user_id: user.value?.id,
           },
         }
       );
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
-    // Tambahkan jawaban AI
+    // push ai response
     messages.value.push({
       role: "ai",
       text:
         data?.answer ||
         "Maaf, AI tidak memberikan jawaban.",
     });
+
   } catch (err) {
+
     console.error(err);
 
     messages.value.push({
       role: "ai",
-      text: "Maaf, terjadi kesalahan.",
+      text:
+        "Maaf, terjadi kesalahan server.",
     });
+
   } finally {
+
     loading.value = false;
+
     await scrollToBottom();
+
   }
+
 };
 
-// Inisialisasi halaman
+// ======================
+// INIT
+// ======================
 onMounted(async () => {
+
   loadingCard.value = true;
 
   try {
-    // Load data awal jika diperlukan
+
+    // ambil user login
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+
+    user.value = authUser;
+
+  } catch (err) {
+
+    console.error(err);
+
   } finally {
+
     loadingCard.value = false;
+
     await scrollToBottom();
+
   }
+
 });
 </script>
 
 <style scoped>
 .chat-body {
-  height: calc(100vh - 160px);
+  height: calc(100vh - 145px);
   overflow-y: auto;
+  padding-bottom: 100px;
+}
+
+.loading-wrapper {
+  height: calc(100vh - 145px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

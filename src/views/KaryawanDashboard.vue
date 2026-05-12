@@ -77,6 +77,50 @@
       </v-col>
     </v-row>
 
+    <!-- UCAPAN CHECKIN / CHECKOUT -->
+    <v-row v-if="motivationCard.show">
+      <v-col cols="12">
+        <v-card
+          class="rounded-xl pa-4 motivation-card"
+          :color="motivationCard.color"
+          elevation="6"
+          variant="flat"
+        >
+          <div class="d-flex align-center">
+            
+            <!-- ICON -->
+            <v-avatar
+              size="52"
+              color="white"
+              class="motivation-avatar"
+            >
+              <v-icon
+                :icon="motivationCard.icon"
+                :color="motivationCard.color"
+                size="28"
+              />
+            </v-avatar>
+
+            <!-- TEXT -->
+            <div class="ml-4">
+              <div class="text-subtitle-1 font-weight-bold text-white">
+                {{
+                  motivationCard.type === "checkout"
+                    ? "Selamat Istirahat 🌙"
+                    : "Selamat Bekerja 🚀"
+                }}
+              </div>
+
+              <div class="text-body-2 text-white mt-1">
+                {{ motivationCard.text }}
+              </div>
+            </div>
+
+          </div>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <!-- PENGUMUMAN PERUSAHAAN -->
     <v-row v-if="announcements.length > 0">
       <v-col cols="12" v-if="!bellRead">
@@ -298,7 +342,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch  } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import { useAuth } from "@/lib/useAuth";
@@ -314,7 +358,7 @@ const loadingCard = ref(true);
 const bellRead = ref(false);
 const lastAnnouncementCount = ref(0);
 
-const showEmergency = ref(false)
+const showEmergency = ref(false);
 
 const router = useRouter();
 
@@ -331,7 +375,6 @@ const {
   history,
   loading: historyLoading,
   loadToday,
-  yyy,
   loadHistory,
   checkin,
   checkout
@@ -370,6 +413,14 @@ const riskPrediction = useRiskPrediction(history);
 /* =========================================================
    STATE
 ========================================================= */
+const motivationCard = ref({
+  show: false,
+  text: "",
+  type: "checkin",
+  color: "success",
+  icon: "mdi-briefcase-check",
+});
+
 const loadingProfile = ref(true);
 const actionLoading = ref(false);
 const syncing = ref(false);
@@ -388,6 +439,87 @@ const show = ref(false);
 const toast = (text) => {
   snackbar.value.text = text;
   snackbar.value.show = true;
+};
+
+const showMotivation = (text, type = "checkin") => {
+  motivationCard.value = {
+    show: true,
+    text,
+    type,
+    color:
+      type === "checkout"
+        ? "indigo"
+        : type === "morning"
+        ? "orange-darken-2"
+        : "success",
+
+    icon:
+      type === "checkout"
+        ? "mdi-weather-night"
+        : type === "morning"
+        ? "mdi-white-balance-sunny"
+        : "mdi-briefcase-check",
+  };
+};
+
+/* =========================================================
+   GREETINGS
+========================================================= */
+const checkinGreetings = [
+  "Check-in berhasil! Semangat bekerja hari ini 💪",
+  "Selamat bekerja, semoga harimu produktif 🚀",
+  "Absensi masuk berhasil. Jangan lupa sarapan ☕",
+  "Semangat menjalani aktivitas hari ini ✨",
+  "Selamat datang kembali, semoga pekerjaan lancar 🙌",
+  "Hari baru dimulai, semangat kerjanya 🔥",
+  "Check-in sukses! Semoga target hari ini tercapai 🎯",
+];
+
+const checkoutGreetings = [
+  "Check-out berhasil! Selamat beristirahat 🌙",
+  "Terima kasih atas kerja keras hari ini 🙏",
+  "Jam kerja selesai. Hati-hati di jalan 🚗",
+  "Selamat menikmati waktu istirahat 😄",
+  "Kerja bagus hari ini! Sampai jumpa besok 👋",
+  "Semoga malammu menyenangkan ✨",
+  "Waktunya recharge energi untuk besok 🔋",
+];
+
+const morningGreetings = [
+  "Selamat pagi ☀️ Semangat menjalani aktivitas hari ini!",
+  "Hari baru dimulai 🚀 Yuk capai target terbaik hari ini!",
+  "Semoga harimu produktif dan menyenangkan ✨",
+  "Ayo semangat kerja hari ini 💪",
+  "Jangan lupa sarapan dan jaga kesehatan 🍳",
+  "Semoga pekerjaan hari ini berjalan lancar 🙌",
+  "Waktunya memulai hari dengan energi positif 🔥",
+];
+
+const randomMessage = (arr) => {
+  return arr[Math.floor(Math.random() * arr.length)];
+};
+
+const checkMorningGreeting = () => {
+  const now = new Date();
+
+  const hour = now.getHours();
+
+  const todayKey = now.toISOString().split("T")[0];
+
+  const lastShown = localStorage.getItem("morningGreetingDate");
+
+  // tampil sekali per hari mulai jam 7 pagi
+  if (hour >= 7 && lastShown !== todayKey) {
+
+    const msg = randomMessage(morningGreetings);
+
+    showMotivation(msg, "morning");
+
+    localStorage.setItem(
+      "morningGreetingDate",
+      todayKey
+    );
+  }
 };
 
 /* =========================================================
@@ -413,6 +545,7 @@ const greeting = computed(() => {
   if (hour < 11) return "Selamat pagi";
   if (hour < 15) return "Selamat siang";
   if (hour < 18) return "Selamat sore";
+
   return "Selamat malam";
 });
 
@@ -420,6 +553,7 @@ const greeting = computed(() => {
    LIVE CLOCK
 ========================================================= */
 const liveClock = ref("—");
+
 let clockTimer = null;
 
 const startClock = () => {
@@ -432,11 +566,14 @@ const startClock = () => {
   };
 
   tick();
+
   clockTimer = setInterval(tick, 1000);
 };
 
 onBeforeUnmount(() => {
-  if (clockTimer) clearInterval(clockTimer);
+  if (clockTimer) {
+    clearInterval(clockTimer);
+  }
 });
 
 /* =========================================================
@@ -449,11 +586,6 @@ const canCheckout = computed(
     attendanceToday.value &&
     !attendanceToday.value.checkout_time
 );
-
-const attendanceProgress = computed(() => {
-  if (!attendanceToday.value) return 0;
-  return attendanceToday.value.checkout_time ? 100 : 50;
-});
 
 const statusChip = computed(() => {
   if (!attendanceToday.value) {
@@ -483,14 +615,19 @@ const daysOfWeek = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
 const weeklyDays = computed(() => {
   const today = new Date();
+
   const result = [];
 
   for (let i = 6; i >= 0; i--) {
+
     const d = new Date(today);
+
     d.setDate(today.getDate() - i);
 
     const iso = d.toISOString().split("T")[0];
+
     const dayName = daysOfWeek[d.getDay()];
+
     const isToday = i === 0;
 
     const found = history.value.find(
@@ -501,6 +638,7 @@ const weeklyDays = computed(() => {
     let color = "grey-lighten-1";
 
     if (found) {
+
       if (found.checkout_time) {
         icon = "mdi-check-circle";
         color = "success";
@@ -529,21 +667,28 @@ const weeklyDays = computed(() => {
    LOAD DATA
 ========================================================= */
 const loadHistory7Days = async () => {
+
   const today = new Date();
+
   const start = new Date(today);
+
   start.setDate(today.getDate() - 6);
 
   const startDate = start.toISOString().split("T")[0];
+
   const endDate = today.toISOString().split("T")[0];
 
   await loadHistory(startDate, endDate);
 };
 
 const refreshAll = async () => {
+
   syncing.value = true;
+
   errorMsg.value = "";
 
   try {
+
     loadingProfile.value = true;
 
     const userProfile = await loadProfile();
@@ -554,13 +699,18 @@ const refreshAll = async () => {
     }
 
     await loadToday();
+
     await loadHistory7Days();
 
-    toast("Data diperbarui.");
   } catch (err) {
-    errorMsg.value = err.message || "Terjadi kesalahan.";
+
+    errorMsg.value =
+      err.message || "Terjadi kesalahan.";
+
   } finally {
+
     loadingProfile.value = false;
+
     syncing.value = false;
   }
 };
@@ -569,30 +719,39 @@ const refreshAll = async () => {
    LOCATION
 ========================================================= */
 const checkLocationManual = async () => {
+
   try {
+
     const result = await checkLocation();
 
     if (result.valid) {
+
       toast(
         `Lokasi valid. Jarak ke kantor: ${Math.round(
           result.distance
         )} meter.`
       );
+
     } else {
+
       toast(
         `Anda berada di luar radius kantor (${Math.round(
           result.distance
         )} meter dari kantor).`
       );
     }
+
   } catch (err) {
+
     errorMsg.value =
       err.message || "Gagal mendapatkan lokasi.";
+
     toast(errorMsg.value);
   }
 };
 
 const ensureLocationValid = async () => {
+
   if (
     isWithinRadius.value === null ||
     !currentLocation.value
@@ -601,6 +760,7 @@ const ensureLocationValid = async () => {
   }
 
   if (!isWithinRadius.value) {
+
     throw new Error(
       `Anda berada di luar radius kantor (${RADIUS_METERS} meter). Absensi tidak diizinkan.`
     );
@@ -613,104 +773,154 @@ const ensureLocationValid = async () => {
    ACTIONS
 ========================================================= */
 const doCheckin = async () => {
+
   actionLoading.value = true;
+
   errorMsg.value = "";
 
   try {
+
     await ensureLocationValid();
+
     await loadToday();
 
     if (attendanceToday.value) {
+
       toast("Anda sudah check-in.");
+
       return;
     }
 
     await checkin();
+
     await refreshAll();
 
-    toast("Check-in berhasil!");
+    const msg = randomMessage(checkinGreetings);
+
+    toast(msg);
+
+    showMotivation(msg, "checkin");
+
   } catch (err) {
-    errorMsg.value = err.message || "Check-in gagal.";
+
+    errorMsg.value =
+      err.message || "Check-in gagal.";
+
     toast(errorMsg.value);
+
   } finally {
+
     actionLoading.value = false;
   }
 };
 
 const doCheckout = async () => {
+
   actionLoading.value = true;
+
   errorMsg.value = "";
 
   try {
+
     await ensureLocationValid();
+
     await loadToday();
 
     if (!attendanceToday.value) {
+
       toast("Belum check-in.");
+
       return;
     }
 
     if (attendanceToday.value.checkout_time) {
+
       toast("Sudah check-out.");
+
       return;
     }
 
     await checkout(attendanceToday.value.id);
+
     await refreshAll();
 
-    toast("Check-out berhasil!");
+    const msg = randomMessage(checkoutGreetings);
+
+    toast(msg);
+
+    showMotivation(msg, "checkout");
+
   } catch (err) {
-    errorMsg.value = err.message || "Check-out gagal.";
+
+    errorMsg.value =
+      err.message || "Check-out gagal.";
+
     toast(errorMsg.value);
+
   } finally {
+
     actionLoading.value = false;
   }
 };
 
-// saat card diklik
+/* =========================================================
+   ANNOUNCEMENT
+========================================================= */
 const handleInfoClick = () => {
+
   bellRead.value = true;
 
-  // simpan jumlah announcement yang sudah dibaca
   localStorage.setItem(
     "announcementCount",
     announcements.value.length
   );
 };
 
+/* =========================================================
+   MOUNTED
+========================================================= */
 onMounted(async () => {
+
   loadingCard.value = true;
 
   try {
+
     startClock();
 
+    checkMorningGreeting();
+
     await refreshAll();
+
     await loadAnnouncements();
 
-    // ambil jumlah announcement terakhir yang sudah dibaca
     const savedCount = Number(
       localStorage.getItem("announcementCount") || 0
     );
 
     lastAnnouncementCount.value = savedCount;
 
-    // kalau ada announcement baru -> aktifkan animasi
     if (announcements.value.length > savedCount) {
+
       bellRead.value = false;
+
     } else {
+
       bellRead.value = true;
     }
-    
 
     if (emergencyAnnouncement.value) {
       showEmergency.value = true;
     }
-  }  finally {
-      loadingCard.value = false;
-    }
+
+  } finally {
+
+    loadingCard.value = false;
+  }
 });
 
-// monitor perubahan announcement
+/* =========================================================
+   WATCH ANNOUNCEMENT
+========================================================= */
 watch(
   () => announcements.value.length,
   (newCount) => {
@@ -719,21 +929,57 @@ watch(
       localStorage.getItem("announcementCount") || 0
     );
 
-    // kalau jumlah announcement bertambah
     if (newCount > savedCount) {
       bellRead.value = false;
     }
   }
 );
 
-
+/* =========================================================
+   LOGOUT
+========================================================= */
 const logout = async () => {
+
   await authLogout();
+
   router.replace("/login");
 };
 </script>
 
 <style scoped>
+.motivation-card {
+  overflow: hidden;
+  position: relative;
+  animation: slideFade 0.5s ease;
+}
+
+.motivation-card::before {
+  content: "";
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 120px;
+  height: 120px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
+}
+
+.motivation-avatar {
+  box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+}
+
+@keyframes slideFade {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .btn-active {
   box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }

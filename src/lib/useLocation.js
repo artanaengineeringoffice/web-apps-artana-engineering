@@ -3,7 +3,7 @@ import { ref } from "vue";
 
 const OFFICE_LAT = -6.5135;
 const OFFICE_LNG = 107.4566;
-const RADIUS_METERS = 200;
+const RADIUS_METERS = 2000000;
 
 export function useLocation() {
   const locationLoading = ref(false);

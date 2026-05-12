@@ -1,144 +1,97 @@
-<script setup>
-import { ref, nextTick } from "vue";
-import { supabase } from "../lib/supabase";
-
-const message = ref("");
-const messages = ref([]);
-const loading = ref(false);
-const chatContainer = ref(null);
-
-const scrollToBottom = async () => {
-  await nextTick();
-
-  if (chatContainer.value) {
-    chatContainer.value.scrollTop =
-      chatContainer.value.scrollHeight;
-  }
-};
-
-const sendMessage = async () => {
-
-  if (!message.value.trim()) return;
-
-  const userMessage = message.value;
-
-  messages.value.push({
-    role: "user",
-    text: userMessage,
-  });
-
-  message.value = "";
-
-  await scrollToBottom();
-
-  loading.value = true;
-
-  try {
-
-    const { data, error } = await supabase.functions.invoke(
-      "quick-processor",
-      {
-        body: {
-          message: userMessage,
-        },
-      }
-    );
-
-    if (error) {
-      throw error;
-    }
-
-    messages.value.push({
-      role: "ai",
-      text:
-        data?.answer ||
-        "Maaf, AI tidak memberikan jawaban.",
-    });
-
-  } catch (err) {
-
-    console.log(err);
-
-    messages.value.push({
-      role: "ai",
-      text: "Maaf, terjadi kesalahan.",
-    });
-
-  } finally {
-
-    loading.value = false;
-
-    await scrollToBottom();
-
-  }
-
-};
-</script>
-
 <template>
-
-  <v-container
-    fluid
-    class="chat-wrapper pa-0"
-  >
-
-    <v-row
-      justify="center"
-      class="ma-0 fill-height"
+  <v-layout class="h-screen">
+    <!-- TOP APP BAR -->
+    <v-app-bar
+      density="compact"
+      flat
+      style="border-bottom: 1px solid #E5E7EB;"
     >
+      <v-app-bar-title class="text-center">
+        <p class="text-h6">Tanya Admin</p>
+      </v-app-bar-title>
+    </v-app-bar>
 
-      <v-col
-        cols="12"
-        md="8"
-        lg="6"
-        class="d-flex align-center justify-center"
-      >
+    <!-- BOTTOM NAVIGATION -->
+    <BottomNavigation />
 
-        <v-card
-          class="chat-card"
-          rounded="xl"
-          elevation="0"
-        >
-
-          <!-- HEADER -->
-          <div class="chat-header">
-
-            <div class="d-flex align-center">
-
-              <v-avatar
-                size="42"
-                color="white"
+    <!-- INPUT BAR -->
+    <v-app-bar
+      location="bottom"
+      flat
+      height="80"
+      style="border-top: 1px solid #E5E7EB;"
+    >
+      <v-container>
+        <v-row>
+          <v-col cols="12">
+            <div class="d-flex">
+              <v-text-field
+                v-model="message"
+                variant="solo-filled"
+                flat
+                hide-details
+                rounded="xl"
+                bg-color="grey-lighten-4"
+                placeholder="Tulis pesan..."
+                @keyup.enter="sendMessage"
               >
-                <v-icon color="primary">
-                  mdi-robot-happy-outline
-                </v-icon>
-              </v-avatar>
+                <template #prepend-inner>
+                  <v-icon color="grey-darken-1">
+                    mdi-message-outline
+                  </v-icon>
+                </template>
+              </v-text-field>
 
-              <div class="ml-3">
-                <h2 class="text-h6 font-weight-bold text-white">
-                  AI Assistant
-                </h2>
-
-                <p class="text-caption text-white opacity-80">
-                  Online
-                </p>
-              </div>
-
+              <v-btn
+                class="ml-4"
+                variant="flat"
+                icon="mdi-send"
+                color="primary"
+                :loading="loading"
+                @click="sendMessage"
+              />
             </div>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-app-bar>
 
-          </div>
-
-          <!-- CHAT BODY -->
-          <div
-            ref="chatContainer"
-            class="chat-body"
+    <!-- MAIN CONTENT -->
+    <v-main class="bgApp">
+      <!-- LOADING PAGE -->
+      <v-container
+        v-if="loadingCard"
+        class="fill-height"
+      >
+        <v-row class="fill-height">
+          <v-col
+            cols="12"
+            class="d-flex align-center justify-center"
           >
+            <LoadingCard
+              title="Loading"
+              subtitle="Mohon tunggu sebentar"
+            />
+          </v-col>
+        </v-row>
+      </v-container>
 
-            <div
-              v-if="messages.length === 0"
-              class="empty-state"
-            >
-
+      <!-- CHAT CONTENT -->
+      <v-container
+        v-else
+        fluid
+        class="fill-height pa-0"
+      >
+        <!-- EMPTY STATE -->
+        <v-row
+          v-if="messages.length === 0"
+          class="fill-height ma-0"
+        >
+          <v-col
+            cols="12"
+            class="d-flex flex-column justify-center align-center"
+          >
+            <div class="text-center">
               <v-icon
                 size="80"
                 color="primary"
@@ -151,243 +104,205 @@ const sendMessage = async () => {
               </h2>
 
               <p class="text-medium-emphasis mt-2">
-                Tanyakan sesuatu kepada AI Assistant
+                Tanyakan sesuatu kepada Admin
               </p>
-
             </div>
+          </v-col>
+        </v-row>
 
+        <!-- CHAT LIST -->
+        <v-row
+          v-else
+          class="fill-height ma-0"
+        >
+          <v-col cols="12" class="pa-0">
             <div
-              v-for="(item, index) in messages"
-              :key="index"
-              class="mb-4"
+              ref="chatContainer"
+              class="chat-body pa-4"
             >
-
-              <!-- USER -->
               <div
-                v-if="item.role === 'user'"
-                class="d-flex justify-end"
+                v-for="(item, index) in messages"
+                :key="index"
+                class="mb-4"
               >
+                <!-- USER MESSAGE -->
+                <v-sheet
+                  v-if="item.role === 'user'"
+                  color="transparent"
+                  class="d-flex justify-end"
+                >
+                  <div>
+                    <div
+                      class="d-flex justify-end align-center mb-2"
+                    >
+                      <p
+                        class="ml-2 my-auto text-caption font-weight-bold"
+                      >
+                        User
+                      </p>
+                    </div>
 
-                <div class="user-message">
+                    <v-sheet
+                      color="blue-lighten-4"
+                      class="px-4 py-2"
+                      rounded="xl"
+                    >
+                      <p class="text-body-2">
+                        {{ item.text }}
+                      </p>
+                    </v-sheet>
+                  </div>
+                </v-sheet>
 
-                  {{ item.text }}
+                <!-- AI MESSAGE -->
+                <div v-else>
+                  <div
+                    class="d-flex align-center mb-2"
+                  >
+                    <v-icon
+                      class="my-auto"
+                      size="small"
+                    >
+                      mdi-robot-outline
+                    </v-icon>
 
+                    <p
+                      class="ml-2 my-auto text-caption font-weight-bold"
+                    >
+                      AI Assistant
+                    </p>
+                  </div>
+
+                  <v-sheet
+                    class="px-4 py-4"
+                    rounded="xl"
+                  >
+                    {{ item.text }}
+                  </v-sheet>
                 </div>
-
               </div>
 
-              <!-- AI -->
+              <!-- LOADING MESSAGE -->
               <div
-                v-else
+                v-if="loading"
                 class="d-flex justify-start"
               >
-
-                <div class="ai-message">
-
-                  <div class="d-flex align-center mb-2">
-
-                    <v-avatar
-                      size="28"
+                <v-sheet
+                  class="px-4 py-3"
+                  rounded="xl"
+                >
+                  <div class="d-flex align-center">
+                    <v-progress-circular
+                      indeterminate
+                      size="18"
+                      width="2"
                       color="primary"
-                    >
-                      <v-icon
-                        size="16"
-                        color="white"
-                      >
-                        mdi-robot-outline
-                      </v-icon>
-                    </v-avatar>
+                    />
 
-                    <span class="ml-2 text-caption font-weight-bold">
-                      AI Assistant
+                    <span class="ml-3">
+                      Admin sedang mengetik...
                     </span>
-
                   </div>
-
-                  <div class="message-text">
-                    {{ item.text }}
-                  </div>
-
-                </div>
-
+                </v-sheet>
               </div>
-
             </div>
-
-            <!-- LOADING -->
-            <div
-              v-if="loading"
-              class="d-flex justify-start"
-            >
-
-              <div class="ai-message">
-
-                <div class="d-flex align-center">
-
-                  <v-progress-circular
-                    indeterminate
-                    size="18"
-                    width="2"
-                    color="primary"
-                  />
-
-                  <span class="ml-3">
-                    AI sedang mengetik...
-                  </span>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-          <!-- INPUT -->
-          <div class="chat-input">
-
-            <v-text-field
-              v-model="message"
-              variant="solo"
-              flat
-              hide-details
-              rounded="xl"
-              bg-color="#F3F4F6"
-              placeholder="Tulis pesan..."
-              @keyup.enter="sendMessage"
-            >
-
-              <template #prepend-inner>
-                <v-icon color="grey">
-                  mdi-message-outline
-                </v-icon>
-              </template>
-
-            </v-text-field>
-
-            <v-btn
-              icon
-              size="50"
-              color="primary"
-              elevation="0"
-              @click="sendMessage"
-              :loading="loading"
-            >
-              <v-icon>
-                mdi-send
-              </v-icon>
-            </v-btn>
-
-          </div>
-
-        </v-card>
-
-      </v-col>
-
-    </v-row>
-
-  </v-container>
-
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-main>
+  </v-layout>
 </template>
 
+<script setup>
+import { ref, nextTick, onMounted } from "vue";
+import { supabase } from "../lib/supabase";
+import BottomNavigation from "../components/BottomNavigation.vue";
+import LoadingCard from "@/components/LoadingCard.vue";
+
+const loadingCard = ref(true);
+const message = ref("");
+const messages = ref([]);
+const loading = ref(false);
+const chatContainer = ref(null);
+
+// Scroll ke bawah
+const scrollToBottom = async () => {
+  await nextTick();
+
+  if (chatContainer.value) {
+    chatContainer.value.scrollTop =
+      chatContainer.value.scrollHeight;
+  }
+};
+
+// Kirim pesan
+const sendMessage = async () => {
+  if (!message.value.trim() || loading.value) return;
+
+  const userMessage = message.value.trim();
+
+  // Tambahkan pesan user
+  messages.value.push({
+    role: "user",
+    text: userMessage,
+  });
+
+  // Kosongkan input
+  message.value = "";
+
+  await scrollToBottom();
+
+  loading.value = true;
+
+  try {
+    const { data, error } =
+      await supabase.functions.invoke(
+        "quick-processor",
+        {
+          body: {
+            message: userMessage,
+          },
+        }
+      );
+
+    if (error) throw error;
+
+    // Tambahkan jawaban AI
+    messages.value.push({
+      role: "ai",
+      text:
+        data?.answer ||
+        "Maaf, AI tidak memberikan jawaban.",
+    });
+  } catch (err) {
+    console.error(err);
+
+    messages.value.push({
+      role: "ai",
+      text: "Maaf, terjadi kesalahan.",
+    });
+  } finally {
+    loading.value = false;
+    await scrollToBottom();
+  }
+};
+
+// Inisialisasi halaman
+onMounted(async () => {
+  loadingCard.value = true;
+
+  try {
+    // Load data awal jika diperlukan
+  } finally {
+    loadingCard.value = false;
+    await scrollToBottom();
+  }
+});
+</script>
+
 <style scoped>
-
-.chat-wrapper {
-  min-height: 100vh;
-  background:
-    linear-gradient(
-      135deg,
-      #EEF2FF 0%,
-      #FFFFFF 50%,
-      #F5F3FF 100%
-    );
-}
-
-.chat-card {
-  width: 100%;
-  height: 92vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid #E5E7EB;
-  background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(20px);
-}
-
-.chat-header {
-  padding: 20px;
-  background:
-    linear-gradient(
-      135deg,
-      #6366F1,
-      #8B5CF6
-    );
-}
-
 .chat-body {
-  flex: 1;
+  height: calc(100vh - 160px);
   overflow-y: auto;
-  padding: 24px;
 }
-
-.chat-input {
-  padding: 16px;
-  border-top: 1px solid #E5E7EB;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: white;
-}
-
-.user-message {
-  max-width: 75%;
-  padding: 14px 18px;
-  border-radius: 20px 20px 4px 20px;
-  background:
-    linear-gradient(
-      135deg,
-      #6366F1,
-      #8B5CF6
-    );
-  color: white;
-  font-size: 14px;
-  line-height: 1.6;
-  box-shadow:
-    0 4px 12px rgba(99,102,241,0.2);
-}
-
-.ai-message {
-  max-width: 80%;
-  padding: 16px;
-  border-radius: 20px 20px 20px 4px;
-  background: white;
-  border: 1px solid #E5E7EB;
-  box-shadow:
-    0 4px 12px rgba(0,0,0,0.04);
-}
-
-.message-text {
-  white-space: pre-wrap;
-  line-height: 1.7;
-  font-size: 14px;
-  color: #111827;
-}
-
-.empty-state {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.chat-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-.chat-body::-webkit-scrollbar-thumb {
-  background: #D1D5DB;
-  border-radius: 20px;
-}
-
 </style>
